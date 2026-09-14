@@ -1,1 +1,847 @@
 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayMind Health — Hospital Revenue Intelligence</title>
+<meta name="description" content="PayMind Health helps hospitals identify potential revenue leakage, reconcile payments, track claims and understand financial performance.">
+
+<style>
+:root{
+  --navy:#082f49;
+  --navy2:#0f172a;
+  --teal:#0f9d8a;
+  --teal2:#14b8a6;
+  --sky:#eaf8f7;
+  --white:#ffffff;
+  --text:#163047;
+  --muted:#64748b;
+  --border:#dbe7ee;
+  --danger:#dc2626;
+  --amber:#d97706;
+  --shadow:0 18px 50px rgba(8,47,73,.12);
+}
+
+*{box-sizing:border-box;margin:0;padding:0}
+
+html{scroll-behavior:smooth}
+
+body{
+  font-family:Inter,Arial,Helvetica,sans-serif;
+  color:var(--text);
+  background:#f8fbfc;
+  line-height:1.6;
+}
+
+.container{
+  width:min(1120px,92%);
+  margin:auto;
+}
+
+header{
+  background:rgba(255,255,255,.96);
+  border-bottom:1px solid var(--border);
+  position:sticky;
+  top:0;
+  z-index:20;
+  backdrop-filter:blur(10px);
+}
+
+.nav{
+  min-height:74px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+}
+
+.logo{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  font-weight:800;
+  font-size:22px;
+  color:var(--navy);
+}
+
+.logo-mark{
+  width:38px;
+  height:38px;
+  border-radius:11px;
+  display:grid;
+  place-items:center;
+  background:linear-gradient(135deg,var(--teal),#0b7d72);
+  color:white;
+  font-weight:900;
+}
+
+nav a{
+  color:#334155;
+  text-decoration:none;
+  margin-left:24px;
+  font-size:14px;
+  font-weight:600;
+}
+
+nav a:hover{color:var(--teal)}
+
+.btn{
+  display:inline-block;
+  padding:13px 20px;
+  border-radius:10px;
+  text-decoration:none;
+  font-weight:700;
+  font-size:14px;
+  border:1px solid transparent;
+  cursor:pointer;
+}
+
+.btn-primary{
+  background:var(--teal);
+  color:white;
+}
+
+.btn-primary:hover{
+  background:#0b8878;
+}
+
+.btn-outline{
+  color:var(--navy);
+  border-color:#b8cbd5;
+  background:white;
+}
+
+.hero{
+  padding:80px 0 70px;
+  background:
+    radial-gradient(circle at 90% 20%, rgba(20,184,166,.15), transparent 30%),
+    linear-gradient(180deg,#ffffff 0%,#f5fbfb 100%);
+}
+
+.hero-grid{
+  display:grid;
+  grid-template-columns:1.05fr .95fr;
+  align-items:center;
+  gap:55px;
+}
+
+.badge{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  background:#e8f7f5;
+  color:#087d70;
+  border:1px solid #c8ebe7;
+  padding:7px 12px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:800;
+  margin-bottom:18px;
+}
+
+h1{
+  font-size:clamp(42px,6vw,67px);
+  line-height:1.02;
+  letter-spacing:-2px;
+  color:var(--navy2);
+  margin-bottom:20px;
+}
+
+.hero p{
+  max-width:620px;
+  color:#526273;
+  font-size:18px;
+  margin-bottom:28px;
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+}
+
+.dashboard-card{
+  background:#fff;
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:20px;
+}
+
+.dash-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:17px;
+}
+
+.hospital{
+  font-weight:800;
+  color:var(--navy);
+}
+
+.live{
+  font-size:11px;
+  padding:5px 9px;
+  background:#e7f8f3;
+  color:#087d70;
+  border-radius:999px;
+  font-weight:800;
+}
+
+.metrics{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.metric{
+  padding:16px;
+  border:1px solid var(--border);
+  border-radius:14px;
+  background:#fbfdfe;
+}
+
+.metric small{
+  display:block;
+  color:var(--muted);
+  margin-bottom:5px;
+  font-size:11px;
+}
+
+.metric strong{
+  display:block;
+  color:var(--navy2);
+  font-size:23px;
+}
+
+.alert{
+  margin-top:14px;
+  border-radius:14px;
+  padding:15px;
+  background:#fff8ec;
+  border:1px solid #f5dfb8;
+}
+
+.alert-title{
+  font-size:12px;
+  font-weight:800;
+  color:#9a5c00;
+  margin-bottom:3px;
+}
+
+.alert p{
+  margin:0;
+  font-size:13px;
+  color:#704b16;
+}
+
+.section{
+  padding:85px 0;
+}
+
+.section-head{
+  max-width:760px;
+  margin-bottom:38px;
+}
+
+.eyebrow{
+  color:var(--teal);
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:1.6px;
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+
+h2{
+  font-size:clamp(30px,4vw,45px);
+  line-height:1.1;
+  color:var(--navy2);
+  margin-bottom:14px;
+}
+
+.section-head p{
+  color:var(--muted);
+}
+
+.problem-grid,
+.feature-grid,
+.steps{
+  display:grid;
+  gap:17px;
+}
+
+.problem-grid{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.feature-grid{
+  grid-template-columns:repeat(3,1fr);
+}
+
+.card{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:24px;
+}
+
+.card h3{
+  color:var(--navy);
+  margin:10px 0 8px;
+  font-size:18px;
+}
+
+.card p{
+  color:var(--muted);
+  font-size:14px;
+}
+
+.icon{
+  width:42px;
+  height:42px;
+  border-radius:12px;
+  background:#e8f7f5;
+  display:grid;
+  place-items:center;
+  color:#078474;
+  font-weight:900;
+}
+
+.steps{
+  grid-template-columns:repeat(4,1fr);
+}
+
+.step{
+  position:relative;
+}
+
+.number{
+  width:38px;
+  height:38px;
+  border-radius:50%;
+  display:grid;
+  place-items:center;
+  background:var(--navy);
+  color:white;
+  font-weight:800;
+  margin-bottom:15px;
+}
+
+.demo{
+  background:var(--navy2);
+  color:white;
+}
+
+.demo h2{color:white}
+
+.demo .section-head p{color:#b9c5d1}
+
+.demo-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:25px;
+  align-items:start;
+}
+
+.ask{
+  border:1px solid rgba(255,255,255,.12);
+  background:#111d31;
+  border-radius:18px;
+  padding:22px;
+}
+
+.ask-question{
+  padding:14px;
+  border-radius:12px;
+  background:#16253c;
+  margin-bottom:10px;
+  color:#dce8f2;
+  font-size:14px;
+}
+
+.ask-answer{
+  padding:17px;
+  border-radius:12px;
+  background:#0e3740;
+  color:#e5fffb;
+  font-size:14px;
+}
+
+.cta{
+  background:linear-gradient(135deg,#eaf8f7,#f8fcfd);
+}
+
+.form-wrap{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:30px;
+  align-items:start;
+}
+
+form{
+  background:white;
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:24px;
+  box-shadow:0 15px 35px rgba(8,47,73,.08);
+}
+
+label{
+  display:block;
+  font-size:13px;
+  font-weight:700;
+  margin-bottom:6px;
+  color:var(--navy);
+}
+
+input,textarea{
+  width:100%;
+  border:1px solid #cbd9e0;
+  border-radius:10px;
+  padding:12px 13px;
+  margin-bottom:16px;
+  font:inherit;
+  outline:none;
+}
+
+input:focus,textarea:focus{
+  border-color:var(--teal);
+  box-shadow:0 0 0 3px rgba(15,157,138,.1);
+}
+
+textarea{
+  min-height:110px;
+  resize:vertical;
+}
+
+.notice{
+  display:none;
+  margin-top:14px;
+  padding:13px;
+  background:#e9f8f5;
+  color:#0a675d;
+  border-radius:10px;
+  font-size:13px;
+}
+
+footer{
+  background:#061f31;
+  color:#b8c9d5;
+  padding:28px 0;
+}
+
+.footer-flex{
+  display:flex;
+  justify-content:space-between;
+  gap:15px;
+  align-items:center;
+}
+
+.footer-brand{
+  color:white;
+  font-weight:800;
+}
+
+.tag{
+  position:fixed;
+  bottom:14px;
+  right:14px;
+  background:#102336;
+  color:#bfe8e2;
+  border:1px solid #294153;
+  padding:8px 11px;
+  border-radius:999px;
+  font-size:10px;
+  font-weight:800;
+  z-index:30;
+}
+
+@media(max-width:900px){
+  .hero-grid,
+  .demo-grid,
+  .form-wrap{
+    grid-template-columns:1fr;
+  }
+
+  .problem-grid,
+  .feature-grid{
+    grid-template-columns:1fr 1fr;
+  }
+
+  .steps{
+    grid-template-columns:1fr 1fr;
+  }
+
+  nav a:not(.btn){
+    display:none;
+  }
+}
+
+@media(max-width:520px){
+  .hero{
+    padding-top:55px;
+  }
+
+  h1{
+    font-size:43px;
+  }
+
+  .problem-grid,
+  .feature-grid,
+  .steps,
+  .metrics{
+    grid-template-columns:1fr;
+  }
+
+  .footer-flex{
+    flex-direction:column;
+    align-items:flex-start;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <div class="container nav">
+    <div class="logo">
+      <div class="logo-mark">P</div>
+      PayMind Health
+    </div>
+
+    <nav>
+      <a href="#problem">Problem</a>
+      <a href="#solution">Solution</a>
+      <a href="#demo">Demo</a>
+      <a href="#pilot" class="btn btn-primary">Request a pilot</a>
+    </nav>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="container hero-grid">
+
+    <div>
+      <div class="badge">HOSPITAL REVENUE INTELLIGENCE</div>
+
+      <h1>Find the money your hospital is losing.</h1>
+
+      <p>
+        PayMind Health helps private hospitals identify potential revenue leakage,
+        reconcile payments, track claims and understand financial performance in one place.
+      </p>
+
+      <div class="actions">
+        <a href="#pilot" class="btn btn-primary">Request a pilot</a>
+        <a href="#demo" class="btn btn-outline">See how it works</a>
+      </div>
+    </div>
+
+    <div class="dashboard-card">
+      <div class="dash-top">
+        <div class="hospital">Lusaka Premier Medical Centre</div>
+        <div class="live">DEMO</div>
+      </div>
+
+      <div class="metrics">
+        <div class="metric">
+          <small>Monthly revenue</small>
+          <strong>K8.42m</strong>
+        </div>
+
+        <div class="metric">
+          <small>Payments received</small>
+          <strong>K7.245m</strong>
+        </div>
+
+        <div class="metric">
+          <small>Outstanding</small>
+          <strong>K1.175m</strong>
+        </div>
+
+        <div class="metric">
+          <small>Potential leakage</small>
+          <strong>K142.6k</strong>
+        </div>
+      </div>
+
+      <div class="alert">
+        <div class="alert-title">7 FINANCIAL ISSUES DETECTED</div>
+        <p>
+          Highest priority: delayed insurance claim • K32,500
+        </p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<section class="section" id="problem">
+  <div class="container">
+
+    <div class="section-head">
+      <div class="eyebrow">The problem</div>
+      <h2>Hospitals can make money and still lose money.</h2>
+      <p>
+        Financial information is often spread across billing systems,
+        bank statements, mobile money, claims platforms and spreadsheets.
+      </p>
+    </div>
+
+    <div class="problem-grid">
+
+      <div class="card">
+        <div class="icon">01</div>
+        <h3>Payment gaps</h3>
+        <p>
+          Payments may not match invoices, receipts or patient accounts.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">02</div>
+        <h3>Claims ageing</h3>
+        <p>
+          Insurance and NHIMA claims can remain outstanding without clear visibility.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">03</div>
+        <h3>Revenue leakage</h3>
+        <p>
+          Small discrepancies across departments can quietly become significant losses.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section" id="solution">
+  <div class="container">
+
+    <div class="section-head">
+      <div class="eyebrow">The PayMind approach</div>
+      <h2>Turn hospital financial data into decisions.</h2>
+      <p>
+        PayMind Health sits above existing hospital and payment systems,
+        helping management understand what is happening financially.
+      </p>
+    </div>
+
+    <div class="feature-grid">
+
+      <div class="card">
+        <div class="icon">£</div>
+        <h3>Executive dashboard</h3>
+        <p>
+          See revenue, collections, outstanding balances and financial exceptions at a glance.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">↗</div>
+        <h3>Revenue leakage</h3>
+        <p>
+          Surface possible missing, duplicated, delayed or mismatched revenue.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">✓</div>
+        <h3>Reconciliation</h3>
+        <p>
+          Compare payments against invoices and identify exceptions requiring attention.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">#</div>
+        <h3>Claims intelligence</h3>
+        <p>
+          Track insurance and NHIMA claims, ageing and outstanding amounts.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">AI</div>
+        <h3>Ask PayMind</h3>
+        <p>
+          Ask financial questions in plain language and receive management-ready answers.
+        </p>
+      </div>
+
+      <div class="card">
+        <div class="icon">R</div>
+        <h3>Management reports</h3>
+        <p>
+          Turn hospital financial activity into clear summaries for decision makers.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+
+    <div class="section-head">
+      <div class="eyebrow">How it works</div>
+      <h2>Connect. Analyse. Prioritise. Act.</h2>
+    </div>
+
+    <div class="steps">
+
+      <div class="card step">
+        <div class="number">1</div>
+        <h3>Connect</h3>
+        <p>
+          Bring together relevant financial and payment data.
+        </p>
+      </div>
+
+      <div class="card step">
+        <div class="number">2</div>
+        <h3>Analyse</h3>
+        <p>
+          PayMind looks for patterns, gaps, anomalies and outstanding balances.
+        </p>
+      </div>
+
+      <div class="card step">
+        <div class="number">3</div>
+        <h3>Prioritise</h3>
+        <p>
+          Management sees which issues deserve attention first.
+        </p>
+      </div>
+
+      <div class="card step">
+        <div class="number">4</div>
+        <h3>Act</h3>
+        <p>
+          Teams investigate exceptions and improve financial control.
+        </p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section class="section demo" id="demo">
+  <div class="container">
+
+    <div class="section-head">
+      <div class="eyebrow">AI demonstration</div>
+      <h2>Ask PayMind what is happening with your money.</h2>
+      <p>
+        A future PayMind assistant could turn financial data into direct answers for hospital management.
+      </p>
+    </div>
+
+    <div class="demo-grid">
+
+      <div>
+        <div class="ask">
+          <div class="ask-question">
+            “Where are we losing money?”
+          </div>
+
+          <div class="ask-answer">
+            Potential revenue leakage of <strong>K142,600</strong> was identified.
+            The largest exception is a delayed insurance claim worth K32,500,
+            followed by reconciliation mismatches.
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="ask">
+          <div class="ask-question">
+            “What should I investigate today?”
+          </div>
+
+          <div class="ask-answer">
+            Review the delayed insurance claim, investigate the suspected duplicate
+            payment and resolve the invoice with no matching bank receipt.
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<section class="section cta" id="pilot">
+  <div class="container form-wrap">
+
+    <div>
+      <div class="eyebrow">Early hospital pilot</div>
+
+      <h2>Let's find out where your hospital's money is going.</h2>
+
+      <p style="color:#64748b;margin-bottom:18px;">
+        PayMind Health is currently a concept and prototype.
+        Pilot discussions will help shape the product around real hospital workflows.
+      </p>
+
+      <p style="color:#64748b;font-size:14px;">
+        <strong>Important:</strong> The dashboard shown on this website uses fictional demonstration data.
+      </p>
+    </div>
+
+    <form id="pilotForm">
+
+      <label for="hospital">Hospital / organisation</label>
+      <input id="hospital" type="text" placeholder="Hospital name" required>
+
+      <label for="email">Work email</label>
+      <input id="email" type="email" placeholder="name@hospital.com" required>
+
+      <label for="message">What would you like to improve?</label>
+      <textarea id="message" placeholder="For example: payment reconciliation, claims tracking, revenue leakage..."></textarea>
+
+      <button class="btn btn-primary" type="submit">
+        Request a pilot
+      </button>
+
+      <div class="notice" id="notice">
+        Thank you. This prototype form is working, but a real email/CRM backend still needs to be connected.
+      </div>
+
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="container footer-flex">
+    <div>
+      <div class="footer-brand">PayMind Health</div>
+      <div style="font-size:13px;margin-top:4px;">
+        Hospital Revenue Intelligence
+      </div>
+    </div>
+
+    <div style="font-size:12px;">
+      © 2026 PayMind Health concept • DEMO DATA ONLY
+    </div>
+  </div>
+</footer>
+
+<div class="tag">CONCEPT • FICTIONAL DATA</div>
+
+<script>
+document.getElementById("pilotForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  document.getElementById("notice").style.display = "block";
+});
+</script>
+
+</body>
+</html>
