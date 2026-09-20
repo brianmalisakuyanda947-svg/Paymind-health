@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayMind Health — MVP</title>
+<style>
+:root{--navy:#082f49;--teal:#0f9d8a;--bg:#f5f8fa;--card:#fff;--text:#163047;--muted:#64748b;--border:#dbe7ee;--red:#b91c1c;--amber:#a16207}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#fff;border-bottom:1px solid var(--border);padding:16px 22px;position:sticky;top:0;z-index:5}
+.nav{max-width:1180px;margin:auto;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{font-size:21px;font-weight:800;color:var(--navy)}button,label{font:inherit}
+.btn{border:0;border-radius:9px;padding:10px 14px;font-weight:700;cursor:pointer}.primary{background:var(--teal);color:#fff}.secondary{background:#fff;border:1px solid var(--border);color:var(--navy)}
+main{max-width:1180px;margin:auto;padding:30px 22px 60px}.hero{display:grid;grid-template-columns:1fr 1fr;gap:30px;padding:40px 0}.badge{display:inline-block;padding:6px 10px;border-radius:999px;background:#eaf8f7;color:#087d70;font-size:11px;font-weight:800}.hero h1{font-size:52px;line-height:1.02;margin:16px 0;color:var(--navy)}.hero p{font-size:17px;color:#526273;max-width:620px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:15px;padding:18px}.snapshot{box-shadow:0 18px 50px rgba(8,47,73,.08)}.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{border:1px solid var(--border);border-radius:12px;padding:14px}.metric small{display:block;color:var(--muted);font-size:11px}.metric strong{display:block;font-size:24px;margin-top:5px}
+.section-title{margin:25px 0 14px}.section-title h2{margin:5px 0;color:var(--navy);font-size:31px}.section-title p{color:var(--muted)}
+.notice{padding:12px 14px;background:#fff8e8;border:1px solid #f2dfae;border-radius:10px;color:#7c5600;font-size:12px;margin-bottom:15px}
+.toolbar{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px}.group{display:flex;gap:8px;flex-wrap:wrap}.field{border:1px solid var(--border);border-radius:9px;padding:9px 10px;background:#fff}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.kpi span{font-size:11px;color:var(--muted)}.kpi strong{display:block;font-size:26px;color:var(--navy);margin:5px 0}.kpi small{color:var(--muted);font-size:10px}
+.panel{background:#fff;border:1px solid var(--border);border-radius:15px;overflow:hidden;margin-top:16px}.panel-head{padding:15px 17px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:center}.panel-head h3{margin:0;font-size:17px;color:var(--navy)}.panel-head small{color:var(--muted);font-size:10px}.table-wrap{overflow:auto}.table{border-collapse:collapse;width:100%;min-width:690px}.table th,.table td{text-align:left;padding:11px 13px;border-bottom:1px solid #edf2f5;font-size:12px}.table th{background:#fbfdfe;color:#516274;font-size:10px;text-transform:uppercase}.pill{display:inline-block;border-radius:999px;padding:4px 7px;font-size:10px;font-weight:700}.red{background:#fee2e2;color:var(--red)}.amber{background:#fef3c7;color:var(--amber)}.empty{padding:20px;color:var(--muted)}.answer{margin:0 17px 17px;padding:14px;border-radius:11px;background:#eefaf8;color:#0b5f56;font-size:12px;min-height:52px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:16px}.footer{margin-top:20px;color:var(--muted);font-size:10px}
+@media(max-width:850px){.hero,.two{grid-template-columns:1fr}.kpis{grid-template-columns:1fr 1fr}}@media(max-width:520px){.kpis,.metrics{grid-template-columns:1fr}.hero h1{font-size:42px}}
+</style>
+</head>
+<body>
+<header><div class="nav"><div class="brand">PayMind Health <span class="badge">MVP v0.2</span></div>
+<div class="group"><label class="btn primary" for="fileInput">Upload CSV</label><input id="fileInput" type="file" accept=".csv,text/csv" hidden></div></div></header>
+
+<main>
+<section class="hero">
+<div><span class="badge">HOSPITAL REVENUE INTELLIGENCE</span><h1>Find the money your hospital is losing.</h1>
+<p>PayMind Health helps private hospitals reconcile invoices and payments, track insurance/NHIMA claims, and surface financial exceptions for management review.</p>
+<div class="group"><button class="btn primary" id="demoBtn">Open demo</button><button class="btn secondary" id="templateBtn">Download CSV template</button></div></div>
+<div class="card snapshot"><div class="panel-head"><h3>Management snapshot</h3><span class="badge">DEMO DATA</span></div>
+<div class="metrics">
+<div class="metric"><small>Invoices billed</small><strong id="pvBilled">K0</strong></div><div class="metric"><small>Payments received</small><strong id="pvPaid">K0</strong></div>
+<div class="metric"><small>Outstanding</small><strong id="pvOutstanding">K0</strong></div><div class="metric"><small>Potential exceptions</small><strong id="pvRisk">K0</strong></div>
+</div></div>
+</section>
+
+<section id="dashboard">
+<div class="section-title"><div class="badge">MVP DASHBOARD</div><h2>Connect. Analyse. Prioritise. Act.</h2><p>Use the demo or upload a CSV with the same columns as the template.</p></div>
+<div class="notice"><b>Prototype:</b> data is processed in your browser. Do not upload identifiable patient data. No hospital-system integration or backend is connected yet.</div>
+
+<div class="toolbar"><div class="group"><button class="btn secondary" id="clearBtn">Clear</button></div>
+<div class="group"><input class="field" id="search" placeholder="Search exceptions"><select class="field" id="age"><option value="30">Claims 30+ days</option><option value="60" selected>Claims 60+ days</option><option value="90">Claims 90+ days</option></select></div></div>
+
+<div class="kpis">
+<div class="card kpi"><span>Invoices billed</span><strong id="billed">K0</strong><small id="invoiceCount">0 invoices</small></div>
+<div class="card kpi"><span>Payments received</span><strong id="paid">K0</strong><small id="paymentCount">0 payments</small></div>
+<div class="card kpi"><span>Outstanding</span><strong id="outstanding">K0</strong><small id="openCount">0 open invoices</small></div>
+<div class="card kpi"><span>Potential exceptions</span><strong id="risk">K0</strong><small id="riskCount">0 items to review</small></div>
+</div>
+
+<section class="panel"><div class="panel-head"><div><h3>Reconciliation exceptions</h3><small>Missing/partial payments, unmatched payments and possible duplicates.</small></div></div>
+<div class="table-wrap"><table class="table"><thead><tr><th>Reference</th><th>Type</th><th>Payer</th><th>Amount</th><th>Issue</th><th>Priority</th></tr></thead><tbody id="exceptions"></tbody></table></div></section>
+
+<div class="two">
+<section class="panel"><div class="panel-head"><div><h3>Claims ageing</h3><small>Open claims above the selected threshold.</small></div></div>
+<div class="table-wrap"><table class="table"><thead><tr><th>Claim</th><th>Payer</th><th>Submitted</th><th>Amount</th><th>Age</th><th>Status</th></tr></thead><tbody id="claims"></tbody></table></div></section>
+
+<section class="panel"><div class="panel-head"><div><h3>Ask PayMind</h3><small>Rule-based in this prototype; AI layer comes later.</small></div></div>
+<div style="padding:15px"><select class="field" id="question" style="width:100%;margin-bottom:10px"><option value="leakage">Where are the biggest potential revenue leaks?</option><option value="claims">Which claims need attention?</option><option value="payments">Which payments do not match an invoice?</option></select>
+<div id="answer" class="answer"></div></div></section>
+</div>
+</section>
+<div class="footer">PayMind Health MVP v0.2 • Fictional demonstration data • Client-side proof of concept.</div>
+</main>
+
+<script>
+const demo=`record_type,reference_id,date,amount,payer,status,department
+invoice,INV-1001,2026-09-03,32500,HealthPlus Insurance,open,Outpatient
+payment,INV-1001,2026-09-07,20000,HealthPlus Insurance,received,Outpatient
+invoice,INV-1002,2026-08-10,18000,NHIMA,open,Inpatient
+payment,INV-1002,2026-08-11,18000,NHIMA,received,Inpatient
+invoice,INV-1003,2026-09-12,12500,MedSure,open,Maternity
+payment,PAY-7788,2026-09-13,12500,MedSure,received,Maternity
+payment,INV-1001,2026-09-08,20000,HealthPlus Insurance,received,Outpatient
+claim,CLM-201,2026-06-18,45000,NHIMA,submitted,Inpatient
+claim,CLM-202,2026-08-01,22500,HealthPlus Insurance,submitted,Outpatient
+claim,CLM-203,2026-09-02,18500,MedSure,submitted,Maternity`;
+
+let data=[];
+const $=id=>document.getElementById(id);
+const money=n=>'K'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+function csv(text){
+ const rows=[];let row=[],cell='',q=false;
+ for(let i=0;i<text.length;i++){let c=text[i],n=text[i+1];
+  if(c=='"'){if(q&&n=='"'){cell+='"';i++}else q=!q}
+  else if(c===','&&!q){row.push(cell.trim());cell=''}
+  else if((c==='\\n'||c==='\\r')&&!q){if(c==='\\r'&&n==='\\n')i++;row.push(cell.trim());if(row.some(Boolean))rows.push(row);row=[];cell=''}
+  else cell+=c;
+ }
+ if(cell!==''||row.length){row.push(cell.trim());rows.push(row)}
+ const h=rows.shift().map(x=>x.toLowerCase());
+ return rows.map(r=>Object.fromEntries(h.map((k,i)=>[k,r[i]||''])));
+}
+function age(d){return Math.max(0,Math.floor((new Date('2026-09-20')-new Date(d))/86400000))}
+function calc(){
+ const inv=data.filter(x=>x.record_type==='invoice'),pay=data.filter(x=>x.record_type==='payment'),cl=data.filter(x=>x.record_type==='claim'),map={};
+ pay.forEach(p=>(map[p.reference_id]??=[]).push(p));
+ const ex=[];
+ inv.forEach(i=>{const ps=map[i.reference_id]||[],paid=ps.reduce((s,p)=>s+Number(p.amount||0),0),amt=Number(i.amount||0);
+  if(!ps.length)ex.push({ref:i.reference_id,type:'Invoice',payer:i.payer,amount:amt,issue:'No matching payment',priority:'High'});
+  else if(amt-paid>0)ex.push({ref:i.reference_id,type:'Invoice',payer:i.payer,amount:amt-paid,issue:'Underpaid / outstanding',priority:'High'});
+  if(ps.length>1)ex.push({ref:i.reference_id,type:'Payment',payer:i.payer,amount:ps.slice(1).reduce((s,p)=>s+Number(p.amount||0),0),issue:'Possible duplicate payment',priority:'High'});
+ });
+ pay.filter(p=>!inv.some(i=>i.reference_id===p.reference_id)).forEach(p=>ex.push({ref:p.reference_id,type:'Payment',payer:p.payer,amount:Number(p.amount||0),issue:'Unmatched payment',priority:'Medium'}));
+ const billed=inv.reduce((s,x)=>s+Number(x.amount||0),0),paid=pay.reduce((s,x)=>s+Number(x.amount||0),0);
+ const open=inv.filter(i=>(map[i.reference_id]||[]).reduce((s,p)=>s+Number(p.amount||0),0)<Number(i.amount||0));
+ const outstanding=open.reduce((s,i)=>s+Number(i.amount||0)-(map[i.reference_id]||[]).reduce((t,p)=>t+Number(p.amount||0),0),0);
+ return {inv,pay,cl,ex,billed,paid,outstanding:Math.max(0,outstanding),open};
+}
+function render(){
+ const c=calc();const risk=c.ex.reduce((s,x)=>s+x.amount,0);
+ $('billed').textContent=money(c.billed);$('paid').textContent=money(c.paid);$('outstanding').textContent=money(c.outstanding);$('risk').textContent=money(risk);
+ $('invoiceCount').textContent=c.inv.length+' invoices';$('paymentCount').textContent=c.pay.length+' payments';$('openCount').textContent=c.open.length+' open invoices';$('riskCount').textContent=c.ex.length+' items to review';
+ $('pvBilled').textContent=money(c.billed);$('pvPaid').textContent=money(c.paid);$('pvOutstanding').textContent=money(c.outstanding);$('pvRisk').textContent=money(risk);
+ renderExceptions(c);renderClaims(c);ask();
+}
+function renderExceptions(c){
+ const q=$('search').value.toLowerCase(),list=c.ex.filter(x=>(x.ref+' '+x.payer+' '+x.issue).toLowerCase().includes(q));
+ $('exceptions').innerHTML=list.length?list.map(x=>`<tr><td><b>${x.ref}</b></td><td>${x.type}</td><td>${x.payer}</td><td>${money(x.amount)}</td><td>${x.issue}</td><td><span class="pill ${x.priority==='High'?'red':'amber'}">${x.priority}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No exceptions found.</td></tr>';
+}
+function renderClaims(c){
+ const t=Number($('age').value),list=c.cl.filter(x=>x.status!=='paid'&&age(x.date)>=t).sort((a,b)=>age(b.date)-age(a.date));
+ $('claims').innerHTML=list.length?list.map(x=>`<tr><td><b>${x.reference_id}</b></td><td>${x.payer}</td><td>${x.date}</td><td>${money(x.amount)}</td><td>${age(x.date)} days</td><td><span class="pill ${age(x.date)>=90?'red':'amber'}">${x.status}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No claims meet this threshold.</td></tr>';
+}
+function ask(){
+ const c=calc(),q=$('question').value,a=$('answer');
+ if(q==='leakage'){let x=[...c.ex].sort((a,b)=>b.amount-a.amount).slice(0,3);a.innerHTML=x.length?'Top review items: '+x.map(v=>`<b>${v.ref}</b> (${money(v.amount)}, ${v.issue.toLowerCase()})`).join('; ')+'.':'No reconciliation exceptions detected.'}
+ else if(q==='claims'){let x=c.cl.filter(v=>v.status!=='paid').sort((a,b)=>age(b.date)-age(a.date)).slice(0,3);a.innerHTML=x.length?'Claims needing attention: '+x.map(v=>`<b>${v.reference_id}</b> (${age(v.date)} days, ${money(v.amount)})`).join('; ')+'.':'No open claims detected.'}
+ else {let x=c.ex.filter(v=>v.type==='Payment'&&v.issue==='Unmatched payment');a.innerHTML=x.length?'Unmatched payments: '+x.map(v=>`<b>${v.ref}</b> (${money(v.amount)})`).join('; ')+'.':'No unmatched payments detected.'}
+}
+$('demoBtn').onclick=()=>{data=csv(demo);render();$('dashboard').scrollIntoView({behavior:'smooth'})};
+$('fileInput').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{data=csv(r.result);render();$('dashboard').scrollIntoView({behavior:'smooth'})}catch(_){alert('Could not read the CSV. Please use the template.')}};r.readAsText(f)};
+$('search').oninput=()=>renderExceptions(calc());$('age').onchange=()=>renderClaims(calc());$('question').onchange=ask;
+$('clearBtn').onclick=()=>{data=[];render()};
+$('templateBtn').onclick=()=>{const s='record_type,reference_id,date,amount,payer,status,department\\ninvoice,INV-1001,2026-09-03,32500,HealthPlus Insurance,open,Outpatient\\npayment,INV-1001,2026-09-07,20000,HealthPlus Insurance,received,Outpatient\\nclaim,CLM-201,2026-06-18,45000,NHIMA,submitted,Inpatient\\n';const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'text/csv'}));a.download='paymind-upload-template.csv';a.click();URL.revokeObjectURL(a.href)};
+data=csv(demo);render();
+</script>
+</body>
+</html>
