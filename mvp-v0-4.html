@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PayMind Health — MVP v0.4</title>
+<meta name="description" content="PayMind Health MVP v0.4 — hospital workspace, reconciliation, claims, exception actions and audit trail.">
+<style>
+:root{
+  --navy:#082f49;--navy2:#0f172a;--teal:#0f9d8a;--bg:#f5f8fa;--card:#fff;
+  --text:#163047;--muted:#64748b;--border:#dbe7ee;--red:#b91c1c;--amber:#a16207;
+  --green:#047857;--blue:#075985;--purple:#6d28d9
+}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.nav{max-width:1240px;margin:auto;padding:13px 22px;display:flex;justify-content:space-between;align-items:center;gap:14px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:850;color:var(--navy);font-size:20px}
+.mark{width:35px;height:35px;border-radius:10px;background:var(--teal);color:#fff;display:grid;place-items:center;font-weight:900}
+.badge{font-size:9px;padding:4px 7px;border-radius:999px;border:1px solid #bfe8e2;background:#eefaf8;color:#087d70}
+.nav-right{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:9px;padding:9px 12px;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+.primary{background:var(--teal);color:#fff}.secondary{background:#fff;color:var(--navy);border:1px solid var(--border)}
+main{max-width:1240px;margin:auto;padding:25px 22px 55px}.hero{display:grid;grid-template-columns:1fr 1fr;gap:28px;align-items:center;padding:25px 0 28px}
+.hero h1{font-size:46px;line-height:1.03;letter-spacing:-1.5px;color:var(--navy2);margin:12px 0}.hero p{color:#526273;font-size:16px;max-width:650px}
+.workspace{background:#fff;border:1px solid var(--border);border-radius:16px;padding:16px;box-shadow:0 15px 40px rgba(8,47,73,.08)}
+.workspace-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.workspace-head strong{color:var(--navy)}
+.select{border:1px solid var(--border);border-radius:9px;padding:9px;background:#fff;color:var(--text);font:inherit;font-size:12px}
+.notice{padding:11px 13px;border-radius:10px;background:#fff8e8;border:1px solid #f2dfae;color:#7c5600;font-size:11px;margin:0 0 14px}
+.section-title{margin:22px 0 12px}.eyebrow{font-size:10px;font-weight:900;letter-spacing:1.4px;text-transform:uppercase;color:var(--teal)}
+.section-title h2{font-size:29px;color:var(--navy);margin:5px 0}.section-title p{margin:0;color:var(--muted);font-size:12px}
+.toolbar{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0}.group{display:flex;gap:7px;flex-wrap:wrap;align-items:center}.field{border:1px solid var(--border);border-radius:9px;padding:8px 9px;background:#fff;color:var(--text);font:inherit;font-size:11px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}.kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}.kpi span{font-size:10px;color:var(--muted)}.kpi strong{display:block;font-size:24px;color:var(--navy2);margin:4px 0}.kpi small{font-size:9px;color:var(--muted)}
+.panel{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:15px}
+.panel-head{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:9px;align-items:center}.panel-head h3{margin:0;font-size:16px;color:var(--navy)}.panel-head small{display:block;color:var(--muted);font-size:9px;margin-top:2px}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:900px}.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2f5;text-align:left;font-size:11px;vertical-align:top}.table th{background:#fbfdfe;color:#516274;font-size:8px;text-transform:uppercase;letter-spacing:.05em}
+.pill{display:inline-block;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:800}.red{background:#fee2e2;color:var(--red)}.amber{background:#fef3c7;color:var(--amber)}.green{background:#dcfce7;color:var(--green)}.blue{background:#e0f2fe;color:var(--blue)}.purple{background:#ede9fe;color:var(--purple)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:15px}.three{display:grid;grid-template-columns:1.25fr .9fr .85fr;gap:15px}
+.bar-row{margin-bottom:11px}.bar-top{display:flex;justify-content:space-between;gap:8px;font-size:10px;margin-bottom:4px}.bar{height:8px;background:#edf2f5;border-radius:999px;overflow:hidden}.bar span{display:block;height:100%;background:var(--teal);border-radius:999px}
+.timeline{padding:14px 15px}.event{display:grid;grid-template-columns:90px 1fr;gap:10px;padding:9px 0;border-bottom:1px solid #edf2f5}.event:last-child{border-bottom:0}.event time{font-size:9px;color:var(--muted)}.event div{font-size:10px}.event strong{color:var(--navy)}.muted{color:var(--muted)}
+.action-buttons{display:flex;gap:5px;flex-wrap:wrap}.tiny{padding:6px 8px;font-size:9px}
+.empty{padding:18px;color:var(--muted);font-size:11px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.52);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}.modal{background:#fff;width:min(720px,100%);max-height:84vh;overflow:auto;border-radius:15px}.modal-head{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;border-bottom:1px solid var(--border)}.modal-head h3{margin:0;color:var(--navy)}.close{border:0;background:#f1f5f9;border-radius:8px;padding:6px 9px;cursor:pointer}.modal-body{padding:16px}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.detail{border:1px solid var(--border);border-radius:10px;padding:10px}.detail small{display:block;font-size:9px;color:var(--muted)}.detail strong{display:block;font-size:12px;margin-top:2px}
+.footer{margin-top:20px;color:var(--muted);font-size:9px}
+@media(max-width:1050px){.hero,.two,.three{grid-template-columns:1fr}.kpis{grid-template-columns:repeat(3,1fr)}}@media(max-width:620px){.kpis{grid-template-columns:1fr 1fr}.detail-grid{grid-template-columns:1fr}.hero h1{font-size:40px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand"><div class="mark">P</div>PayMind Health <span class="badge">MVP v0.4</span></div>
+    <div class="nav-right">
+      <select id="hospitalSelect" class="select" aria-label="Hospital workspace"></select>
+      <button class="btn secondary" id="roleBtn">Role: Finance Manager</button>
+      <button class="btn primary" id="userBtn">BM • Brian</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section class="hero">
+  <div>
+    <span class="badge">MULTI-HOSPITAL WORKSPACE</span>
+    <h1>Control the exceptions. Keep the evidence.</h1>
+    <p>PayMind v0.4 introduces the structure for hospital workspaces, users, persistent records, exception actions and an audit trail.</p>
+  </div>
+  <div class="workspace">
+    <div class="workspace-head"><strong>Current workspace</strong><span class="pill green" id="workspaceStatus">LOCAL DEMO</span></div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Hospital</div>
+    <div id="workspaceName" style="font-size:22px;font-weight:800;color:var(--navy);margin-bottom:9px"></div>
+    <div class="group">
+      <span class="pill blue">Finance Manager</span><span class="pill purple">1 active user</span><span class="pill green">Audit enabled</span>
+    </div>
+  </div>
+</section>
+
+<div class="notice"><strong>Prototype:</strong> this version uses browser storage to demonstrate the data model and workflow. No real authentication or server database is connected yet. Use fictional/de-identified data only.</div>
+
+<section id="dashboard">
+<div class="section-title"><div class="eyebrow">CONTROL CENTRE</div><h2>Financial operations dashboard</h2><p>Switch hospital workspace, review exceptions, record actions and inspect the audit history.</p></div>
+
+<div class="toolbar">
+  <div class="group">
+    <button class="btn primary" id="seedBtn">Reset demo dataset</button>
+    <button class="btn secondary" id="exportBtn">Export exceptions</button>
+  </div>
+  <div class="group">
+    <input class="field" id="search" placeholder="Search exception / payer">
+    <select class="field" id="priority"><option value="all">All priorities</option><option value="High">High</option><option value="Medium">Medium</option></select>
+    <select class="field" id="status"><option value="all">All statuses</option><option value="Open">Open</option><option value="In Review">In Review</option><option value="Resolved">Resolved</option></select>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><span>Invoices billed</span><strong id="billed">K0</strong><small id="invoiceCount">0 invoices</small></div>
+  <div class="kpi"><span>Payments received</span><strong id="paid">K0</strong><small id="paymentCount">0 payments</small></div>
+  <div class="kpi"><span>Outstanding</span><strong id="outstanding">K0</strong><small id="openCount">0 open invoices</small></div>
+  <div class="kpi"><span>Exception exposure</span><strong id="exposure">K0</strong><small id="exceptionCount">0 exceptions</small></div>
+  <div class="kpi"><span>Open actions</span><strong id="openActions">0</strong><small>items requiring follow-up</small></div>
+</div>
+
+<section class="panel">
+<div class="panel-head"><div><h3>Exceptions & actions</h3><small>Click a reference to inspect evidence, assign a status and record the next action.</small></div><span class="tag" id="dataState">LOCAL DEMO</span></div>
+<div class="table-wrap"><table class="table"><thead><tr><th>Reference</th><th>Type</th><th>Payer</th><th>Exposure</th><th>Reason</th><th>Status</th><th>Next action</th><th>Priority</th><th>Action</th></tr></thead><tbody id="exceptionBody"></tbody></table></div>
+</section>
+
+<div class="three">
+<section class="panel"><div class="panel-head"><div><h3>Claims ageing</h3><small>Open claims and their age.</small></div><select class="field" id="claimAge"><option value="30">30+ days</option><option value="60" selected>60+ days</option><option value="90">90+ days</option></select></div><div class="table-wrap"><table class="table"><thead><tr><th>Claim</th><th>Payer</th><th>Amount</th><th>Age</th><th>Status</th></tr></thead><tbody id="claimBody"></tbody></table></div></section>
+
+<section class="panel"><div class="panel-head"><div><h3>Exposure by payer</h3><small>Review exposure, not confirmed loss.</small></div></div><div class="breakdown" id="payerBreakdown" style="padding:14px"></div></section>
+
+<section class="panel"><div class="panel-head"><div><h3>Audit trail</h3><small>Recent actions in this workspace.</small></div></div><div class="timeline" id="timeline"></div></section>
+</div>
+
+<section class="panel">
+<div class="panel-head"><div><h3>Ask PayMind</h3><small>Rule-based in v0.4. Secure AI is the next layer after backend validation.</small></div></div>
+<div style="padding:14px">
+  <select class="field" id="question" style="width:100%;margin-bottom:9px">
+    <option value="today">What should I investigate today?</option>
+    <option value="payer">Which payer has the highest open exposure?</option>
+    <option value="unmatched">Which payments are unmatched?</option>
+    <option value="aged">Which claims need urgent follow-up?</option>
+  </select>
+  <div class="answer" id="answer" style="margin:0;padding:13px;border-radius:10px;background:#eefaf8;color:#0b5f56;font-size:11px;min-height:50px"></div>
+</div>
+</section>
+
+<div class="footer">PayMind Health MVP v0.4 • Browser persistence only • Fictional demonstration data.</div>
+</section>
+</main>
+
+<div class="modal-backdrop" id="modalBackdrop">
+<div class="modal">
+  <div class="modal-head"><h3 id="modalTitle">Exception</h3><button class="close" id="closeModal">Close</button></div>
+  <div class="modal-body" id="modalBody"></div>
+</div>
+</div>
+
+<script>
+const STORE='paymind_v04_store';
+const defaultData={
+  hospitals:[
+    {id:'h1',name:'Lusaka Premier Medical Centre'},
+    {id:'h2',name:'Copperbelt Private Hospital'}
+  ],
+  currentHospital:'h1',
+  users:[{id:'u1',hospitalId:'h1',name:'Brian Kuyanda',role:'Finance Manager'}],
+  invoices:[
+    {id:'INV-1001',hospitalId:'h1',date:'2026-09-03',amount:32500,payer:'HealthPlus Insurance',status:'Open'},
+    {id:'INV-1002',hospitalId:'h1',date:'2026-08-10',amount:18000,payer:'NHIMA',status:'Open'},
+    {id:'INV-1003',hospitalId:'h1',date:'2026-09-12',amount:12500,payer:'MedSure',status:'Open'},
+    {id:'INV-2001',hospitalId:'h2',date:'2026-09-04',amount:42000,payer:'NHIMA',status:'Open'}
+  ],
+  payments:[
+    {id:'PAY-1001',hospitalId:'h1',invoiceRef:'INV-1001',date:'2026-09-07',amount:20000,payer:'HealthPlus Insurance'},
+    {id:'PAY-1002',hospitalId:'h1',invoiceRef:'INV-1002',date:'2026-08-11',amount:18000,payer:'NHIMA'},
+    {id:'PAY-1003',hospitalId:'h1',invoiceRef:'INV-1001',date:'2026-09-08',amount:20000,payer:'HealthPlus Insurance'},
+    {id:'PAY-1004',hospitalId:'h1',invoiceRef:'PAY-7788',date:'2026-09-13',amount:12500,payer:'MedSure'},
+    {id:'PAY-2001',hospitalId:'h2',invoiceRef:'INV-2001',date:'2026-09-15',amount:15000,payer:'NHIMA'}
+  ],
+  claims:[
+    {id:'CLM-201',hospitalId:'h1',invoiceRef:'INV-1002',date:'2026-06-18',amount:45000,payer:'NHIMA',status:'Submitted'},
+    {id:'CLM-202',hospitalId:'h1',invoiceRef:'INV-1001',date:'2026-08-01',amount:22500,payer:'HealthPlus Insurance',status:'Submitted'},
+    {id:'CLM-203',hospitalId:'h1',invoiceRef:'INV-1003',date:'2026-09-02',amount:18500,payer:'MedSure',status:'Submitted'},
+    {id:'CLM-204',hospitalId:'h2',invoiceRef:'INV-2001',date:'2026-05-10',amount:30500,payer:'NHIMA',status:'Submitted'}
+  ],
+  actions:[
+    {id:'A-1',hospitalId:'h1',exceptionRef:'INV-1001',status:'In Review',nextAction:'Verify remaining balance and match payer remittance',owner:'Brian Kuyanda',updated:'2026-09-20T18:10:00',note:'Possible duplicate/partial payment pattern.'},
+    {id:'A-2',hospitalId:'h1',exceptionRef:'PAY-7788',status:'Open',nextAction:'Locate the correct invoice in the billing ledger',owner:'Brian Kuyanda',updated:'2026-09-20T18:25:00',note:'Payment has no invoice match.'}
+  ],
+  audit:[
+    {hospitalId:'h1',at:'2026-09-20T18:25:00',user:'Brian Kuyanda',event:'Updated exception',ref:'PAY-7788',detail:'Status Open; action: locate matching invoice'},
+    {hospitalId:'h1',at:'2026-09-20T18:10:00',user:'Brian Kuyanda',event:'Updated exception',ref:'INV-1001',detail:'Status In Review; action: verify balance'},
+    {hospitalId:'h1',at:'2026-09-20T17:45:00',user:'Brian Kuyanda',event:'Uploaded dataset',ref:'DEMO-SEP-2026',detail:'Fictional demo dataset loaded'}
+  ]
+};
+let store=load();
+
+function load(){
+  try{return JSON.parse(localStorage.getItem(STORE))||structuredClone(defaultData)}catch(_){return structuredClone(defaultData)}
+}
+function save(){localStorage.setItem(STORE,JSON.stringify(store))}
+function hospitalId(){return store.currentHospital}
+function data(){
+  const h=hospitalId();
+  return {
+    invoices:store.invoices.filter(x=>x.hospitalId===h),
+    payments:store.payments.filter(x=>x.hospitalId===h),
+    claims:store.claims.filter(x=>x.hospitalId===h),
+    actions:store.actions.filter(x=>x.hospitalId===h),
+    audit:store.audit.filter(x=>x.hospitalId===h),
+    user:store.users.find(x=>x.hospitalId===h)||store.users[0]
+  }
+}
+const $=id=>document.getElementById(id);
+const money=n=>'K'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+function daysOld(date){const d=new Date(date+'T00:00:00'),n=new Date();n.setHours(0,0,0,0);return Math.max(0,Math.floor((n-d)/86400000))}
+function model(){
+  const d=data(), map={}; d.payments.forEach(p=>(map[p.invoiceRef]??=[]).push(p));
+  const ex=[];
+  d.invoices.forEach(i=>{
+    const ps=map[i.id]||[], billed=Number(i.amount), paid=ps.reduce((s,p)=>s+Number(p.amount||0),0);
+    const current=d.actions.find(a=>a.exceptionRef===i.id);
+    if(!ps.length) ex.push({ref:i.id,type:'Underpayment',payer:i.payer,amount:billed,reason:'No matching payment is linked to the invoice.',action:'Check the bank/remittance ledger and confirm whether payment was received.',priority:'High'});
+    else if(paid<billed) ex.push({ref:i.id,type:'Underpayment',payer:i.payer,amount:billed-paid,reason:`Payments total ${money(paid)} against ${money(billed)} billed.`,action:'Verify the remaining balance, check claim status and follow up with the payer.',priority:'High'});
+    else if(paid>billed) ex.push({ref:i.id,type:'Overpayment',payer:i.payer,amount:paid-billed,reason:`Payments total ${money(paid)} against ${money(billed)} billed.`,action:'Verify whether the excess is valid or duplicated before posting/refunding.',priority:'Medium'});
+    if(ps.length>1) ex.push({ref:i.id,type:'Duplicate payment',payer:i.payer,amount:ps.slice(1).reduce((s,p)=>s+Number(p.amount||0),0),reason:`${ps.length} payments use the same invoice reference.`,action:'Compare payment IDs, dates and bank references to confirm duplication.',priority:'High'});
+    ex.forEach(()=>{});
+    if(current) ex[ex.length-1].meta=current;
+  });
+  d.payments.forEach(p=>{
+    if(!d.invoices.some(i=>i.id===p.invoiceRef)) ex.push({ref:p.id,type:'Unmatched payment',payer:p.payer,amount:Number(p.amount),reason:'Payment reference does not match an invoice in this workspace.',action:'Search the billing ledger for the correct invoice before allocation.',priority:'Medium'});
+  });
+  const actionsByRef=Object.fromEntries(d.actions.map(a=>[a.exceptionRef,a]));
+  ex.forEach(x=>{x.meta=actionsByRef[x.ref]||null});
+  const billed=d.invoices.reduce((s,x)=>s+Number(x.amount||0),0), paid=d.payments.reduce((s,x)=>s+Number(x.amount||0),0);
+  const openInv=d.invoices.filter(i=>(map[i.id]||[]).reduce((s,p)=>s+Number(p.amount||0),0)<Number(i.amount||0));
+  const outstanding=openInv.reduce((s,i)=>s+Number(i.amount||0)-(map[i.id]||[]).reduce((t,p)=>t+Number(p.amount||0),0),0);
+  return {d,ex,billed,paid,outstanding};
+}
+function render(){
+  $('workspaceName').textContent=store.hospitals.find(h=>h.id===hospitalId()).name;
+  const m=model(), exposure=m.ex.reduce((s,x)=>s+x.amount,0);
+  $('billed').textContent=money(m.billed);$('paid').textContent=money(m.paid);$('outstanding').textContent=money(m.outstanding);$('exposure').textContent=money(exposure);
+  $('invoiceCount').textContent=m.d.invoices.length+' invoices';$('paymentCount').textContent=m.d.payments.length+' payments';$('openCount').textContent=m.d.invoices.filter(i=>i.status==='Open').length+' open invoices';$('exceptionCount').textContent=m.ex.length+' exceptions';
+  $('openActions').textContent=m.d.actions.filter(a=>a.status!=='Resolved').length;
+  $('dataState').textContent='LOCAL DEMO';
+  renderHospitals();renderExceptions(m);renderClaims(m);renderPayers(m);renderAudit(m);ask();
+}
+function renderHospitals(){
+  $('hospitalSelect').innerHTML=store.hospitals.map(h=>`<option value="${h.id}" ${h.id===hospitalId()?'selected':''}>${h.name}</option>`).join('');
+}
+function renderExceptions(m){
+  const q=$('search').value.toLowerCase(),p=$('priority').value,s=$('status').value;
+  const list=m.ex.filter(x=>(!q||(`${x.ref} ${x.payer} ${x.reason}`).toLowerCase().includes(q))&&(!p||p==='all'||x.priority===p)&&(!s||s==='all'||((x.meta?.status)||'Open')===s));
+  window.filteredExceptions=list;
+  $('exceptionBody').innerHTML=list.length?list.map((x,i)=>{
+    const status=x.meta?.status||'Open',next=x.meta?.nextAction||x.action;
+    return `<tr><td><button class="btn secondary tiny" onclick="openException(${i})"><b>${x.ref}</b></button></td>
+    <td><span class="pill ${x.type==='Underpayment'?'red':x.type==='Duplicate payment'?'amber':'blue'}">${x.type}</span></td>
+    <td>${x.payer}</td><td>${money(x.amount)}</td><td>${x.reason}</td>
+    <td><span class="pill ${status==='Resolved'?'green':status==='In Review'?'blue':'amber'}">${status}</span></td>
+    <td>${next}</td><td><span class="pill ${x.priority==='High'?'red':'amber'}">${x.priority}</span></td>
+    <td><div class="action-buttons"><button class="btn secondary tiny" onclick="setStatus('${x.ref}','In Review')">Review</button><button class="btn primary tiny" onclick="setStatus('${x.ref}','Resolved')">Resolve</button></div></td></tr>`
+  }).join(''):'<tr><td colspan="9" class="empty">No exceptions match the current filters.</td></tr>';
+}
+function renderClaims(m){
+  const t=Number($('claimAge').value),list=m.d.claims.filter(c=>c.status!=='Paid'&&daysOld(c.date)>=t).sort((a,b)=>daysOld(b.date)-daysOld(a.date));
+  $('claimBody').innerHTML=list.length?list.map(c=>`<tr><td><b>${c.id}</b></td><td>${c.payer}</td><td>${money(c.amount)}</td><td>${daysOld(c.date)}d</td><td><span class="pill ${daysOld(c.date)>=90?'red':'amber'}">${c.status}</span></td></tr>`).join(''):'<tr><td colspan="5" class="empty">No aged claims at this threshold.</td></tr>';
+}
+function renderPayers(m){
+  const t={};m.ex.forEach(x=>t[x.payer]=(t[x.payer]||0)+x.amount);const e=Object.entries(t).sort((a,b)=>b[1]-a[1]);
+  if(!e.length){$('payerBreakdown').innerHTML='<div class="empty">No exception exposure.</div>';return}
+  const max=e[0][1]||1;
+  $('payerBreakdown').innerHTML=e.map(([payer,amt])=>`<div class="bar-row"><div class="bar-top"><span>${payer}</span><b>${money(amt)}</b></div><div class="bar"><span style="width:${Math.max(6,Math.round(amt/max*100))}%"></span></div></div>`).join('');
+}
+function renderAudit(m){
+  const a=m.d.audit.sort((x,y)=>new Date(y.at)-new Date(x.at)).slice(0,7);
+  $('timeline').innerHTML=a.length?a.map(x=>`<div class="event"><time>${new Date(x.at).toLocaleString()}</time><div><strong>${x.event}</strong> · ${x.ref}<div class="muted">${x.user} — ${x.detail}</div></div></div>`).join(''):'<div class="empty">No audit events yet.</div>';
+}
+function ask(){
+  const m=model(),q=$('question').value;
+  if(q==='today'){const h=m.ex.filter(x=>(x.meta?.status||'Open')!=='Resolved'&&x.priority==='High').sort((a,b)=>b.amount-a.amount).slice(0,3);$('answer').innerHTML=h.length?'Priority actions: '+h.map(x=>`<b>${x.ref}</b> (${money(x.amount)})`).join('; ')+'.':'No high-priority open exceptions.'}
+  else if(q==='payer'){const t={};m.ex.filter(x=>(x.meta?.status||'Open')!=='Resolved').forEach(x=>t[x.payer]=(t[x.payer]||0)+x.amount);const top=Object.entries(t).sort((a,b)=>b[1]-a[1])[0];$('answer').innerHTML=top?`<b>${top[0]}</b> has the highest open exposure at <b>${money(top[1])}</b>.`:'No open exposure detected.'}
+  else if(q==='unmatched'){const u=m.ex.filter(x=>x.type==='Unmatched payment');$('answer').innerHTML=u.length?'Unmatched payments: '+u.map(x=>`<b>${x.ref}</b> (${money(x.amount)})`).join('; ')+'.':'No unmatched payments detected.'}
+  else {const c=m.d.claims.filter(x=>x.status!=='Paid').sort((a,b)=>daysOld(b.date)-daysOld(a.date)).slice(0,3);$('answer').innerHTML=c.length?'Oldest open claims: '+c.map(x=>`<b>${x.id}</b> (${daysOld(x.date)} days, ${money(x.amount)})`).join('; ')+'.':'No open claims.'}
+}
+function log(event,ref,detail){
+  store.audit.push({hospitalId:hospitalId(),at:new Date().toISOString(),user:(data().user?.name||'Finance Manager'),event,ref,detail});save();
+}
+function setStatus(ref,status){
+  const existing=store.actions.find(a=>a.hospitalId===hospitalId()&&a.exceptionRef===ref);
+  if(existing){existing.status=status;existing.updated=new Date().toISOString();}
+  else store.actions.push({id:'A-'+Date.now(),hospitalId:hospitalId(),exceptionRef:ref,status,nextAction:'Review and document next step',owner:data().user?.name||'Finance Manager',updated:new Date().toISOString(),note:''});
+  log('Updated exception',ref,'Status set to '+status);save();render();
+}
+function openException(i){
+  const x=window.filteredExceptions[i];if(!x)return;
+  const status=x.meta?.status||'Open';
+  $('modalTitle').textContent=x.ref+' — '+x.type;
+  $('modalBody').innerHTML=`<div class="detail-grid"><div class="detail"><small>Payer</small><strong>${x.payer}</strong></div><div class="detail"><small>Exposure</small><strong>${money(x.amount)}</strong></div><div class="detail"><small>Priority</small><strong>${x.priority}</strong></div><div class="detail"><small>Status</small><strong>${status}</strong></div></div>
+  <div style="margin-top:12px"><small class="muted">Why flagged</small><p>${x.reason}</p></div>
+  <div><small class="muted">Suggested next action</small><p>${x.action}</p></div>
+  <div style="margin-top:12px;padding:12px;border-radius:10px;background:#eefaf8;color:#0b5f56"><b>Workflow:</b> mark the exception In Review when someone owns the investigation, then Resolve once evidence supports closure. Each change is written to the local audit trail.</div>
+  <div class="action-buttons" style="margin-top:12px"><button class="btn secondary" onclick="setStatus('${x.ref}','In Review');closeModal()">Mark In Review</button><button class="btn primary" onclick="setStatus('${x.ref}','Resolved');closeModal()">Resolve</button></div>`;
+  $('modalBackdrop').style.display='flex';
+}
+function closeModal(){$('modalBackdrop').style.display='none'}
+$('hospitalSelect').onchange=e=>{store.currentHospital=e.target.value;save();render()};
+$('search').oninput=()=>renderExceptions(model());$('priority').onchange=()=>renderExceptions(model());$('status').onchange=()=>renderExceptions(model());$('claimAge').onchange=()=>renderClaims(model());$('question').onchange=ask;
+$('seedBtn').onclick=()=>{localStorage.removeItem(STORE);store=load();save();render()};
+$('exportBtn').onclick=()=>{const m=model();const rows=m.ex.map(x=>[x.ref,x.type,x.payer,x.amount,x.reason,x.meta?.status||'Open',x.meta?.nextAction||x.action,x.priority]);const csv=[['reference','type','payer','exposure','reason','status','next_action','priority'],...rows].map(r=>r.map(v=>`"${String(v??'').replace(/"/g,'""')}"`).join(',')).join('\\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='paymind-v0-4-exceptions.csv';a.click();URL.revokeObjectURL(a.href)};
+$('closeModal').onclick=closeModal;$('modalBackdrop').onclick=e=>{if(e.target===$('modalBackdrop'))closeModal()};
+render();
+</script>
+</body>
+</html>
