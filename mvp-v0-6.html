@@ -254,7 +254,7 @@ function render(){
   const billed=state.invoices.reduce((s,x)=>s+(+x.amount||0),0);
   const paid=state.payments.reduce((s,x)=>s+(+x.amount||0),0);
   const map={}; state.payments.forEach(p=>(map[p.invoice_ref]??=[]).push(p));
-  const open=state.invoices.filter(i=map[i.invoice_ref]?.reduce((s,p)=>s+(+p.amount||0),0)<+i.amount);
+  const open=state.invoices.filter(i=>map[i.invoice_ref]?.reduce((s,p)=>s+(+p.amount||0),0)<+i.amount);
   const outstanding=open.reduce((s,i)=>s+(+i.amount||0)-(map[i.invoice_ref]||[]).reduce((z,p)=>z+(+p.amount||0),0),0);
   const exposure=state.exceptions.reduce((s,x)=>s+x.amount,0);
   const oc=state.claims.filter(c=>c.status!=='paid'&&c.status!=='rejected');
