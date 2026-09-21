@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PayMind Health — v0.6</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{--navy:#082f49;--navy2:#0f172a;--teal:#0f9d8a;--bg:#f5f8fa;--card:#fff;--text:#163047;--muted:#64748b;--border:#dbe7ee;--red:#b91c1c;--amber:#a16207;--green:#047857}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+header{background:#fff;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.nav{max-width:1180px;margin:auto;padding:14px 22px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:850;color:var(--navy);font-size:21px}
+.mark{width:35px;height:35px;border-radius:10px;background:var(--teal);color:#fff;display:grid;place-items:center}
+.pill{display:inline-block;padding:4px 7px;border-radius:999px;font-size:8px;font-weight:800}.blue{background:#e0f2fe;color:#075985}.green{background:#dcfce7;color:var(--green)}.amber{background:#fef3c7;color:var(--amber)}.red{background:#fee2e2;color:var(--red)}
+main{max-width:1180px;margin:auto;padding:28px 22px 55px}
+.screen{display:none}.screen.active{display:block}
+.login{min-height:75vh;display:grid;place-items:center}
+.login-card{width:min(450px,100%);background:#fff;border:1px solid var(--border);border-radius:18px;padding:28px;box-shadow:0 18px 50px rgba(8,47,73,.08)}
+.login-card h1{color:var(--navy);margin:10px 0}.field{width:100%;padding:11px 12px;border:1px solid var(--border);border-radius:9px;font:inherit;margin:6px 0 13px}.label{font-size:11px;font-weight:750;color:var(--navy)}
+.btn{border:0;border-radius:9px;padding:10px 14px;font:inherit;font-size:12px;font-weight:750;cursor:pointer}.primary{background:var(--teal);color:#fff}.secondary{background:#fff;color:var(--navy);border:1px solid var(--border)}.danger{background:#fff;color:var(--red);border:1px solid #efc7c7}.btn:disabled{opacity:.55;cursor:not-allowed}
+.msg{display:none;padding:10px 12px;border-radius:9px;font-size:11px;margin-top:10px}.msg.show{display:block}.msg.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}.msg.ok{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.hero{display:flex;justify-content:space-between;gap:15px;align-items:flex-end}.hero h1{margin:10px 0 4px;color:var(--navy);font-size:36px}.hero p{color:var(--muted);font-size:13px}
+.notice{padding:11px 13px;border-radius:10px;background:#fff8e8;border:1px solid #f2dfae;color:#7c5600;font-size:11px;margin:15px 0}
+.toolbar{display:flex;justify-content:space-between;gap:9px;flex-wrap:wrap;margin:14px 0}.group{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.select,.search{border:1px solid var(--border);border-radius:9px;padding:9px;background:#fff;font:inherit;font-size:11px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:11px}.kpi{background:#fff;border:1px solid var(--border);border-radius:14px;padding:14px}.kpi span{font-size:9px;color:var(--muted)}.kpi strong{display:block;font-size:23px;color:var(--navy);margin:5px 0}.kpi small{font-size:9px;color:var(--muted)}
+.panel{background:#fff;border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:15px}.panel-head{padding:13px 15px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:10px;align-items:center}.panel-head h3{margin:0;color:var(--navy);font-size:16px}.panel-head small{color:var(--muted);font-size:9px}
+.table-wrap{overflow:auto}.table{width:100%;border-collapse:collapse;min-width:720px}.table th,.table td{padding:10px 11px;border-bottom:1px solid #edf2f5;text-align:left;font-size:11px;vertical-align:top}.table th{background:#fbfdfe;color:#516274;font-size:8px;text-transform:uppercase;letter-spacing:.04em}
+.two{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}.empty{padding:18px;color:var(--muted);font-size:11px}
+.bar-row{margin:0 15px 12px}.bar-top{display:flex;justify-content:space-between;font-size:10px;margin-bottom:4px}.bar{height:8px;background:#edf2f5;border-radius:999px}.bar span{display:block;height:100%;background:var(--teal);border-radius:999px}
+.upload-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:15px}.upload-card{border:1px solid var(--border);border-radius:12px;padding:15px;background:#fcfeff}.upload-card h4{margin:0 0 6px;color:var(--navy);font-size:14px}.upload-card p{font-size:10px;color:var(--muted);line-height:1.45}
+.preview{margin:0 15px 15px;border:1px solid var(--border);border-radius:10px;overflow:auto;max-height:280px}.preview table{width:100%;border-collapse:collapse;min-width:650px}.preview th,.preview td{padding:8px;border-bottom:1px solid #edf2f5;font-size:10px;text-align:left}.preview th{background:#f8fbfd;font-size:8px;text-transform:uppercase}.validation{padding:0 15px 10px;font-size:10px}.validation .good{color:var(--green)}.validation .bad{color:var(--red)}
+.status-box{padding:10px 15px;font-size:10px}.template-row{display:flex;gap:7px;flex-wrap:wrap;padding:0 15px 15px}
+.footer{margin-top:20px;color:var(--muted);font-size:9px}
+@media(max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}.two,.upload-grid{grid-template-columns:1fr}.hero{flex-direction:column;align-items:flex-start}}
+@media(max-width:600px){.kpis{grid-template-columns:1fr 1fr}.hero h1{font-size:31px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="nav">
+    <div class="brand"><div class="mark">P</div>PayMind Health <span class="pill blue">v0.6</span></div>
+    <div id="userArea" class="group" style="display:none">
+      <span id="who" style="font-size:11px;color:var(--muted)"></span>
+      <button class="btn secondary" id="signOut">Sign out</button>
+    </div>
+  </div>
+</header>
+
+<main>
+<section id="loginScreen" class="screen active">
+  <div class="login">
+    <div class="login-card">
+      <span class="pill blue">SECURE WORKSPACE</span>
+      <h1>Sign in to PayMind</h1>
+      <p style="color:var(--muted);font-size:13px">Use the Supabase user you created for PayMind.</p>
+      <form id="loginForm">
+        <div class="label">Email</div>
+        <input id="email" class="field" type="email" autocomplete="username" required>
+        <div class="label">Password</div>
+        <input id="password" class="field" type="password" autocomplete="current-password" required>
+        <button class="btn primary" style="width:100%">Sign in</button>
+      </form>
+      <div id="loginMsg" class="msg"></div>
+      <p style="color:var(--muted);font-size:10px;margin-top:15px">Browser build uses the Supabase publishable key. Never use a secret/service-role key in this file.</p>
+    </div>
+  </div>
+</section>
+
+<section id="appScreen" class="screen">
+  <div class="hero">
+    <div>
+      <span class="pill blue">AUTHENTICATED</span>
+      <h1 id="hospitalName">Hospital</h1>
+      <p id="roleLine"></p>
+    </div>
+    <div class="group">
+      <span class="pill green">Database connected</span>
+      <button class="btn secondary" id="refresh">Refresh</button>
+      <button class="btn primary" id="scrollUpload">Upload data</button>
+    </div>
+  </div>
+
+  <div class="notice"><b>v0.6:</b> authenticated users can preview and upload invoices, payments or claims. Every upload is tagged to the current hospital and checked by database RLS. Use fictional/de-identified development data only.</div>
+
+  <div class="kpis">
+    <div class="kpi"><span>Invoices billed</span><strong id="billed">K0</strong><small id="invCount">0 invoices</small></div>
+    <div class="kpi"><span>Payments received</span><strong id="paid">K0</strong><small id="payCount">0 payments</small></div>
+    <div class="kpi"><span>Outstanding</span><strong id="outstanding">K0</strong><small id="openCount">0 open invoices</small></div>
+    <div class="kpi"><span>Review exposure</span><strong id="exposure">K0</strong><small id="exCount">0 exceptions</small></div>
+    <div class="kpi"><span>Open claims</span><strong id="claimCount">0</strong><small id="claimValue">K0</small></div>
+  </div>
+
+  <section class="panel" id="uploadPanel">
+    <div class="panel-head">
+      <div><h3>Secure CSV upload</h3><small>Validate → preview → confirm → insert into Supabase.</small></div>
+      <span id="roleBadge" class="pill blue"></span>
+    </div>
+
+    <div class="upload-grid">
+      <div class="upload-card">
+        <h4>1. Choose dataset</h4>
+        <p>Select the type of financial records you are uploading.</p>
+        <select id="datasetType" class="select" style="width:100%">
+          <option value="invoices">Invoices</option>
+          <option value="payments">Payments</option>
+          <option value="claims">Claims</option>
+        </select>
+      </div>
+      <div class="upload-card">
+        <h4>2. Choose CSV</h4>
+        <p>Your CSV is parsed in the browser first. Nothing is inserted until you click <b>Confirm upload</b>.</p>
+        <input id="csvFile" type="file" accept=".csv,text/csv" class="field" style="margin-bottom:0">
+      </div>
+    </div>
+
+    <div class="template-row">
+      <button class="btn secondary" data-template="invoices">Download invoice template</button>
+      <button class="btn secondary" data-template="payments">Download payment template</button>
+      <button class="btn secondary" data-template="claims">Download claims template</button>
+    </div>
+
+    <div id="uploadStatus" class="status-box"></div>
+    <div id="validation" class="validation"></div>
+    <div id="preview" class="preview" style="display:none"></div>
+
+    <div class="toolbar" style="padding:0 15px 15px;margin:0">
+      <div class="group">
+        <button class="btn secondary" id="clearUpload">Clear</button>
+      </div>
+      <div class="group">
+        <button class="btn primary" id="confirmUpload" disabled>Confirm upload</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><div><h3>Reconciliation exceptions</h3><small>Computed from live invoices and payments.</small></div></div>
+    <div class="table-wrap"><table class="table"><thead><tr><th>Reference</th><th>Type</th><th>Payer</th><th>Exposure</th><th>Reason</th><th>Priority</th></tr></thead><tbody id="exceptionBody"></tbody></table></div>
+  </section>
+
+  <div class="two">
+    <section class="panel">
+      <div class="panel-head"><div><h3>Claims ageing</h3><small>Live claims from this hospital.</small></div>
+      <select id="claimAge" class="select"><option value="30">30+ days</option><option value="60" selected>60+ days</option><option value="90">90+ days</option></select></div>
+      <div class="table-wrap"><table class="table"><thead><tr><th>Claim</th><th>Payer</th><th>Amount</th><th>Submitted</th><th>Age</th><th>Status</th></tr></thead><tbody id="claimBody"></tbody></table></div>
+    </section>
+    <section class="panel">
+      <div class="panel-head"><div><h3>Exposure by payer</h3><small>Review exposure, not confirmed loss.</small></div></div>
+      <div id="payerBody" style="padding-top:14px"></div>
+    </section>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><div><h3>Ask PayMind</h3><small>Rule-based analysis over authenticated workspace data.</small></div></div>
+    <div style="padding:14px">
+      <select id="question" class="select" style="width:100%;margin-bottom:9px">
+        <option value="today">What should I investigate today?</option>
+        <option value="payer">Which payer has the highest open exposure?</option>
+        <option value="unmatched">Which payments are unmatched?</option>
+        <option value="claims">Which claims need attention?</option>
+      </select>
+      <div id="answer" class="answer" style="padding:13px;border-radius:10px;background:#eefaf8;color:#0b5f56;font-size:11px;min-height:48px"></div>
+    </div>
+  </section>
+
+  <div class="footer">PayMind Health v0.6 • Supabase-backed development build • Write access is constrained by hospital membership and role.</div>
+</section>
+</main>
+
+<script>
+const SUPABASE_URL = 'https://kocudbrrynfdyapgtesa.supabase.co';
+const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_ZKCyR4D_1VvvQ2-5WX9sTA_zcnkoxz-';
+
+const sb = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  {auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:true}}
+);
+
+let state = {user:null,memberships:[],active:null,invoices:[],payments:[],claims:[],exceptions:[]};
+let uploadRows = [];
+let uploadType = 'invoices';
+
+const $ = id => document.getElementById(id);
+const money = n => 'K' + Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+const age = d => {
+  const x = new Date(d+'T00:00:00'), n = new Date();
+  n.setHours(0,0,0,0);
+  return Number.isNaN(x.getTime()) ? 0 : Math.max(0,Math.floor((n-x)/86400000));
+};
+
+function showMsg(text,kind='err'){
+  $('loginMsg').textContent=text;
+  $('loginMsg').className='msg show '+kind;
+}
+function screen(s){
+  $('loginScreen').classList.toggle('active',s==='login');
+  $('appScreen').classList.toggle('active',s==='app');
+  $('userArea').style.display=s==='app'?'flex':'none';
+}
+function roleName(r){return String(r||'member').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());}
+
+async function loadWorkspace(){
+  const user = state.user;
+  const mr = await sb.from('hospital_members').select('hospital_id,role').eq('user_id',user.id);
+  if(mr.error) throw new Error(mr.error.message);
+  if(!mr.data?.length) throw new Error('This account is authenticated but is not linked to a PayMind hospital.');
+  const ids = mr.data.map(x=>x.hospital_id);
+  const hr = await sb.from('hospitals').select('id,name,country,currency').in('id',ids);
+  if(hr.error) throw new Error(hr.error.message);
+  state.memberships = mr.data.map(m=>({...m,hospital:hr.data.find(h=>h.id===m.hospital_id)})).filter(x=>x.hospital);
+  if(!state.memberships.length) throw new Error('No accessible hospital workspace was found.');
+  state.active = state.memberships[0];
+  $('hospitalName').textContent = state.active.hospital.name;
+  $('roleLine').textContent = (user.email||'Signed-in user')+' • '+roleName(state.active.role);
+  $('roleBadge').textContent = roleName(state.active.role);
+  await loadData();
+  screen('app');
+}
+
+async function loadData(){
+  const h = state.active.hospital_id;
+  const [a,b,c] = await Promise.all([
+    sb.from('invoices').select('*').eq('hospital_id',h).order('invoice_date',{ascending:false}),
+    sb.from('payments').select('*').eq('hospital_id',h).order('payment_date',{ascending:false}),
+    sb.from('claims').select('*').eq('hospital_id',h).order('submitted_date',{ascending:false})
+  ]);
+  for(const r of [a,b,c]) if(r.error) throw new Error(r.error.message);
+  state.invoices=a.data||[]; state.payments=b.data||[]; state.claims=c.data||[];
+  buildExceptions(); render();
+}
+
+function buildExceptions(){
+  const map={}; state.payments.forEach(p=>(map[p.invoice_ref]??=[]).push(p));
+  const invMap=Object.fromEntries(state.invoices.map(i=>[i.invoice_ref,i]));
+  const out=[];
+  state.invoices.forEach(i=>{
+    const ps=map[i.invoice_ref]||[], billed=+i.amount||0, paid=ps.reduce((s,x)=>s+(+x.amount||0),0);
+    if(!ps.length) out.push({ref:i.invoice_ref,type:'Underpayment',payer:i.payer,amount:billed,reason:'No matching payment is linked to the invoice.',priority:'High'});
+    else if(paid<billed) out.push({ref:i.invoice_ref,type:'Underpayment',payer:i.payer,amount:billed-paid,reason:'Payments are below the invoice amount.',priority:'High'});
+    else if(paid>billed) out.push({ref:i.invoice_ref,type:'Overpayment',payer:i.payer,amount:paid-billed,reason:'Payments exceed the invoice amount.',priority:'Medium'});
+    if(ps.length>1) out.push({ref:i.invoice_ref,type:'Duplicate payment',payer:i.payer,amount:ps.slice(1).reduce((s,x)=>s+(+x.amount||0),0),reason:'Multiple payments share the invoice reference.',priority:'High'});
+  });
+  state.payments.forEach(p=>{
+    if(!invMap[p.invoice_ref]) out.push({ref:p.payment_ref||p.id,type:'Unmatched payment',payer:p.payer||'Unknown',amount:+p.amount||0,reason:'Payment reference does not match an invoice.',priority:'Medium'});
+  });
+  state.exceptions=out;
+}
+
+function render(){
+  const billed=state.invoices.reduce((s,x)=>s+(+x.amount||0),0);
+  const paid=state.payments.reduce((s,x)=>s+(+x.amount||0),0);
+  const map={}; state.payments.forEach(p=>(map[p.invoice_ref]??=[]).push(p));
+  const open=state.invoices.filter(i=map[i.invoice_ref]?.reduce((s,p)=>s+(+p.amount||0),0)<+i.amount);
+  const outstanding=open.reduce((s,i)=>s+(+i.amount||0)-(map[i.invoice_ref]||[]).reduce((z,p)=>z+(+p.amount||0),0),0);
+  const exposure=state.exceptions.reduce((s,x)=>s+x.amount,0);
+  const oc=state.claims.filter(c=>c.status!=='paid'&&c.status!=='rejected');
+  const cv=oc.reduce((s,c)=>s+(+c.amount||0),0);
+
+  $('billed').textContent=money(billed); $('paid').textContent=money(paid); $('outstanding').textContent=money(Math.max(0,outstanding));
+  $('exposure').textContent=money(exposure); $('claimCount').textContent=oc.length; $('claimValue').textContent=money(cv);
+  $('invCount').textContent=state.invoices.length+' invoices'; $('payCount').textContent=state.payments.length+' payments';
+  $('openCount').textContent=open.length+' open invoices'; $('exCount').textContent=state.exceptions.length+' exceptions';
+  renderExceptions(); renderClaims(); renderPayers(); ask();
+}
+function renderExceptions(){
+  const q=$('search')?.value?.toLowerCase()||'', p=$('priority')?.value||'all';
+  const list=state.exceptions.filter(x=>(!q||(`${x.ref} ${x.payer} ${x.reason}`).toLowerCase().includes(q))&&(p==='all'||x.priority===p));
+  $('exceptionBody').innerHTML=list.length?list.map(x=>`<tr><td><b>${x.ref}</b></td><td><span class="pill ${x.priority==='High'?'red':'amber'}">${x.type}</span></td><td>${x.payer}</td><td>${money(x.amount)}</td><td>${x.reason}</td><td><span class="pill ${x.priority==='High'?'red':'amber'}">${x.priority}</span></td></tr>`).join(''):'<tr><td colspan="6" class="empty">No exceptions found.</td></tr>';
+}
+function renderClaims(){
+  const t=+$('claimAge').value;
+  const list=state.claims.filter(c=>c.status!=='paid'&&c.status!=='rejected'&&age(c.submitted_date)>=t).sort((a,b)=>age(b.submitted_date)-age(a.submitted_date));
+  $('claimBody').innerHTML=list.length?list.map(c=>`<tr><td><b>${c.claim_ref}</b></td><td>${c.payer}</td><td>${money(c.amount)}</td><td>${c.submitted_date}</td><td>${age(c.submitted_date)} days</td><td>${c.status}</td></tr>`).join(''):'<tr><td colspan="6" class="empty">No claims meet this threshold.</td></tr>';
+}
+function renderPayers(){
+  const t={}; state.exceptions.forEach(x=>t[x.payer]=(t[x.payer]||0)+x.amount);
+  const e=Object.entries(t).sort((a,b)=>b[1]-a[1]);
+  if(!e.length){$('payerBody').innerHTML='<div class="empty">No exception exposure detected.</div>';return;}
+  const max=e[0][1]||1;
+  $('payerBody').innerHTML=e.map(([p,v])=>`<div class="bar-row"><div class="bar-top"><span>${p}</span><b>${money(v)}</b></div><div class="bar"><span style="width:${Math.max(6,Math.round(v/max*100))}%"></span></div></div>`).join('');
+}
+function ask(){
+  if(!state.invoices.length&&!state.payments.length&&!state.claims.length){$('answer').textContent='The workspace is connected, but there is no test financial data yet.';return;}
+  const q=$('question').value;
+  if(q==='today'){
+    const x=state.exceptions.filter(e=>e.priority==='High').sort((a,b)=>b.amount-a.amount).slice(0,3);
+    $('answer').innerHTML=x.length?'Priority review: '+x.map(e=>`<b>${e.ref}</b> (${money(e.amount)})`).join('; ')+'.':'No high-priority exceptions.';
+  }else if(q==='payer'){
+    const t={};state.exceptions.forEach(x=>t[x.payer]=(t[x.payer]||0)+x.amount);
+    const top=Object.entries(t).sort((a,b)=>b[1]-a[1])[0];
+    $('answer').innerHTML=top?`Highest exception exposure: <b>${top[0]}</b> at <b>${money(top[1])}</b>.`:'No exception exposure.';
+  }else if(q==='unmatched'){
+    const x=state.exceptions.filter(e=>e.type==='Unmatched payment');
+    $('answer').innerHTML=x.length?'Unmatched: '+x.map(e=>`<b>${e.ref}</b> (${money(e.amount)})`).join('; ')+'.':'No unmatched payments.';
+  }else{
+    const x=state.claims.filter(c=>c.status!=='paid'&&c.status!=='rejected').sort((a,b)=>age(b.submitted_date)-age(a.submitted_date)).slice(0,3);
+    $('answer').innerHTML=x.length?'Claims needing attention: '+x.map(c=>`<b>${c.claim_ref}</b> (${age(c.submitted_date)} days)`).join('; ')+'.':'No open claims.';
+  }
+}
+
+function parseCSV(text){
+  const rows=[];let row=[],cell='',quoted=false;
+  for(let i=0;i<text.length;i++){
+    const ch=text[i],next=text[i+1];
+    if(ch==='"'){
+      if(quoted&&next==='"'){cell+='"';i++;}
+      else quoted=!quoted;
+    }else if(ch===','&&!quoted){row.push(cell.trim());cell='';}
+    else if((ch==='\n'||ch==='\r')&&!quoted){
+      if(ch==='\r'&&next==='\n')i++;
+      row.push(cell.trim());cell='';
+      if(row.some(v=>v!==''))rows.push(row);
+      row=[];
+    }else cell+=ch;
+  }
+  if(cell!==''||row.length){row.push(cell.trim());if(row.some(v=>v!==''))rows.push(row);}
+  if(!rows.length)return [];
+  const headers=rows[0].map(h=>h.trim());
+  return rows.slice(1).map(r=>{
+    const obj={};headers.forEach((h,i)=>obj[h]=r[i]??'');return obj;
+  });
+}
+
+const schemas={
+  invoices:['invoice_ref','invoice_date','amount','payer','department','status'],
+  payments:['payment_ref','invoice_ref','payment_date','amount','payer','payment_method'],
+  claims:['claim_ref','invoice_ref','payer','submitted_date','amount','status']
+};
+
+function validateRows(type,rows){
+  const required=schemas[type];const problems=[];
+  if(!rows.length)return {ok:false,problems:['The CSV contains no data rows.']};
+  const headers=Object.keys(rows[0]);
+  const missing=required.filter(h=>!headers.includes(h));
+  if(missing.length)problems.push('Missing columns: '+missing.join(', '));
+  rows.forEach((r,i)=>{
+    const n=i+2;
+    const ref=r[required[0]]?.trim();
+    if(!ref)problems.push(`Row ${n}: ${required[0]} is required.`);
+    const dateField=type==='invoices'?'invoice_date':type==='payments'?'payment_date':'submitted_date';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(r[dateField]||''))problems.push(`Row ${n}: ${dateField} must be YYYY-MM-DD.`);
+    const amount=Number(r.amount);
+    if(!Number.isFinite(amount)||amount<0)problems.push(`Row ${n}: amount must be a non-negative number.`);
+    const payer=r.payer?.trim();
+    if(!payer)problems.push(`Row ${n}: payer is required.`);
+    if(type==='invoices'&&!['open','part_paid','paid','void'].includes(r.status||''))problems.push(`Row ${n}: invalid invoice status.`);
+    if(type==='claims'&&!['draft','submitted','queried','approved','part_paid','paid','rejected'].includes(r.status||''))problems.push(`Row ${n}: invalid claim status.`);
+    if(type==='payments'&&!r.payment_ref?.trim())problems.push(`Row ${n}: payment_ref is required.`);
+  });
+  return {ok:problems.length===0,problems:problems.slice(0,20)};
+}
+
+function previewRows(rows){
+  const cols=schemas[uploadType];
+  $('preview').style.display=rows.length?'block':'none';
+  if(!rows.length){$('preview').innerHTML='';return;}
+  $('preview').innerHTML='<table><thead><tr>'+cols.map(c=>`<th>${c}</th>`).join('')+'</tr></thead><tbody>'+rows.slice(0,25).map(r=>'<tr>'+cols.map(c=>`<td>${String(r[c]??'')}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+}
+
+function prepareUpload(){
+  uploadRows=[];$('confirmUpload').disabled=true;$('preview').style.display='none';$('validation').innerHTML='';$('uploadStatus').textContent='';
+  const file=$('csvFile').files[0];
+  if(!file)return;
+  if(file.size>2*1024*1024){$('validation').innerHTML='<div class="bad">File is larger than 2 MB for this development build.</div>';return;}
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      uploadRows=parseCSV(String(reader.result||'')).filter(r=>Object.values(r).some(v=>v!==''));
+      const result=validateRows(uploadType,uploadRows);
+      if(result.ok){
+        $('validation').innerHTML=`<div class="good">✓ ${uploadRows.length} row(s) validated successfully. Previewing up to 25 rows.</div>`;
+        $('confirmUpload').disabled=false;
+      }else{
+        $('validation').innerHTML=`<div class="bad">✕ ${result.problems.length} validation issue(s):<br>${result.problems.map(x=>`• ${x}`).join('<br>')}</div>`;
+      }
+      previewRows(uploadRows);
+    }catch(e){$('validation').innerHTML='<div class="bad">Could not parse this CSV.</div>';}
+  };
+  reader.readAsText(file);
+}
+
+async function confirmUpload(){
+  if(!uploadRows.length||!state.active)return;
+  const button=$('confirmUpload');button.disabled=true;button.textContent='Uploading…';
+  const h=state.active.hospital_id;
+  try{
+    let result;
+    if(uploadType==='invoices'){
+      const payload=uploadRows.map(r=>({hospital_id:h,invoice_ref:r.invoice_ref.trim(),invoice_date:r.invoice_date,amount:Number(r.amount),payer:r.payer.trim(),department:r.department?.trim()||null,status:r.status.trim()}));
+      result=await sb.from('invoices').insert(payload).select('invoice_ref');
+    }else if(uploadType==='payments'){
+      const payload=uploadRows.map(r=>({hospital_id:h,payment_ref:r.payment_ref.trim(),invoice_ref:r.invoice_ref?.trim()||null,payment_date:r.payment_date,amount:Number(r.amount),payer:r.payer.trim(),payment_method:r.payment_method?.trim()||null}));
+      result=await sb.from('payments').insert(payload).select('payment_ref');
+    }else{
+      const payload=uploadRows.map(r=>({hospital_id:h,claim_ref:r.claim_ref.trim(),invoice_ref:r.invoice_ref?.trim()||null,payer:r.payer.trim(),submitted_date:r.submitted_date,amount:Number(r.amount),status:r.status.trim()}));
+      result=await sb.from('claims').insert(payload).select('claim_ref');
+    }
+    if(result.error)throw new Error(result.error.message);
+    $('uploadStatus').innerHTML=`<span class="pill green">Upload successful</span> ${uploadRows.length} record(s) inserted.`;
+    $('csvFile').value='';uploadRows=[];$('confirmUpload').disabled=true;previewRows([]);
+    await loadData();
+  }catch(e){
+    $('uploadStatus').innerHTML=`<span class="pill red">Upload failed</span> ${e.message}`;
+    button.disabled=false;
+  }finally{button.textContent='Confirm upload';if(!uploadRows.length)button.disabled=true;}
+}
+
+function clearUpload(){uploadRows=[];$('csvFile').value='';$('validation').innerHTML='';$('uploadStatus').textContent='';$('preview').style.display='none';$('preview').innerHTML='';$('confirmUpload').disabled=true;}
+
+function downloadTemplate(type){
+  const headers=schemas[type];
+  const sample={
+    invoices:'INV-NEW-001,2026-09-21,15000,Example Insurance,Outpatient,open',
+    payments:'PAY-NEW-001,INV-NEW-001,2026-09-22,5000,Example Insurance,Bank',
+    claims:'CLM-NEW-001,INV-NEW-001,Example Insurance,2026-09-01,15000,submitted'
+  }[type];
+  const blob=new Blob([headers.join(',')+'\\n'+sample+'\\n'],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`paymind-${type}-template.csv`;a.click();URL.revokeObjectURL(url);
+}
+
+$('loginForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  try{
+    showMsg('Signing in…','ok');
+    const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
+    if(r.error)throw new Error(r.error.message);
+    state.user=r.data.user;await loadWorkspace();showMsg('Signed in successfully.','ok');
+  }catch(e){screen('login');showMsg(e.message,'err');}
+});
+
+$('signOut').onclick=async()=>{await sb.auth.signOut();state={user:null,memberships:[],active:null,invoices:[],payments:[],claims:[],exceptions:[]};clearUpload();screen('login');$('loginMsg').className='msg';};
+$('refresh').onclick=async()=>{try{await loadData()}catch(e){alert(e.message)}};
+$('scrollUpload').onclick=()=>$('uploadPanel').scrollIntoView({behavior:'smooth',block:'start'});
+$('datasetType').onchange=e=>{uploadType=e.target.value;clearUpload();};
+$('csvFile').addEventListener('change',prepareUpload);
+$('confirmUpload').onclick=confirmUpload;
+$('clearUpload').onclick=clearUpload;
+document.querySelectorAll('[data-template]').forEach(b=>b.onclick=()=>downloadTemplate(b.dataset.template));
+$('claimAge').onchange=renderClaims;
+$('question').onchange=ask;
+
+sb.auth.getSession().then(async r=>{
+  if(r.data.session){
+    state.user=r.data.session.user;
+    try{await loadWorkspace();}catch(e){screen('login');showMsg(e.message,'err');}
+  }
+});
+</script>
+</body>
+</html>
