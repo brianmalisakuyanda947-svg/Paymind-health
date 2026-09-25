@@ -4985,7 +4985,7 @@ function renderClaimControlTower(){
   $('v32ClaimActionCoverage').textContent=actionCoverage+'%';
   $('v32ClaimActionCoverageBar').style.width=actionCoverage+'%';
   $('v32ClaimActionCoverageNote').textContent=reviewed
-    ? activeOrClosedWithStep+' of '+reviewed+' reviewed claim'+(reviewed===1?'':'s')+' have a next step or completed follow-up.'
+    ? canonical.items.filter(x=>x.reviewed && (x.kind==='completed'||!!x.nextDate)).length+' of '+reviewed+' reviewed claim'+(reviewed===1?'':'s')+' have a next step or completed follow-up.'
     : 'No reviewed claims yet.';
 }
 
