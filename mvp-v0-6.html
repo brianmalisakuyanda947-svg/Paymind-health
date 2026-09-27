@@ -424,15 +424,54 @@ function downloadTemplate(type){
 
 $('loginForm').addEventListener('submit',async e=>{
   e.preventDefault();
+  const email=$('email').value.trim();
+  const password=$('password').value;
+  if(!email||!password){showMsg('Enter your email and password.','err');return;}
+  const button=$('loginForm').querySelector('button[type="submit"]');
+  if(button){button.disabled=true;button.textContent='Signing in…';}
+  showMsg('Signing in…','ok');
   try{
-    showMsg('Signing in…','ok');
-    const r=await sb.auth.signInWithPassword({email:$('email').value.trim(),password:$('password').value});
-    if(r.error)throw new Error(r.error.message);
-    state.user=r.data.user;await loadWorkspace();showMsg('Signed in successfully.','ok');
-  }catch(e){screen('login');showMsg(e.message,'err');}
+    const r=await sb.auth.signInWithPassword({email,password});
+    if(r.error)throw new Error(r.error.message||'Sign-in failed.');
+    if(!r.data?.session||!r.data?.user)throw new Error('Sign-in completed but no active session was returned.');
+    state.user=r.data.user;
+    await loadWorkspace();
+    showMsg('Signed in successfully.','ok');
+  }catch(e){
+    console.error('PayMind sign-in error',e);
+    state.user=null;
+    screen('login');
+    showMsg(e?.message||'Unable to sign in. Please check your credentials and try again.','err');
+  }finally{
+    if(button){button.disabled=false;button.textContent='Sign in';}
+  }
 });
 
-$('signOut').onclick=async()=>{await sb.auth.signOut();state={user:null,memberships:[],active:null,invoices:[],payments:[],claims:[],exceptions:[]};clearUpload();screen('login');$('loginMsg').className='msg';};
+$('signOut').onclick=async()=>{
+  try{await sb.auth.signOut();}catch(e){console.warn('PayMind sign-out error',e);}
+  state={user:null,memberships:[],active:null,invoices:[],payments:[],claims:[],exceptions:[]};
+  clearUpload();
+  screen('login');
+  $('loginMsg').className='msg';
+};
+
+sb.auth.onAuthStateChange(async(event,session)=>{
+  if(event==='SIGNED_OUT'){
+    state.user=null;
+    screen('login');
+    return;
+  }
+  if((event==='SIGNED_IN'||event==='TOKEN_REFRESHED')&&session?.user&&!state.user){
+    state.user=session.user;
+    try{await loadWorkspace();}catch(e){
+      console.error('PayMind session restore error',e);
+      await sb.auth.signOut();
+      state.user=null;
+      screen('login');
+      showMsg(e?.message||'Your session could not be restored. Please sign in again.','err');
+    }
+  }
+});
 $('refresh').onclick=async()=>{try{await loadData()}catch(e){alert(e.message)}};
 $('scrollUpload').onclick=()=>$('uploadPanel').scrollIntoView({behavior:'smooth',block:'start'});
 $('datasetType').onchange=e=>{uploadType=e.target.value;clearUpload();};
@@ -444,9 +483,18 @@ $('claimAge').onchange=renderClaims;
 $('question').onchange=ask;
 
 sb.auth.getSession().then(async r=>{
-  if(r.data.session){
+  if(r.error){console.warn('PayMind session check error',r.error);return;}
+  if(r.data?.session?.user){
     state.user=r.data.session.user;
-    try{await loadWorkspace();}catch(e){screen('login');showMsg(e.message,'err');}
+    try{await loadWorkspace();}catch(e){
+      console.error('PayMind initial session restore error',e);
+      await sb.auth.signOut();
+      state.user=null;
+      screen('login');
+      showMsg(e?.message||'Your saved session is no longer valid. Please sign in again.','err');
+    }
+  }else{
+    screen('login');
   }
 });
 </script>
