@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PayMind Health — v2.1.43 Payment Health Intelligence</title>
+<title>PayMind Health — v2.1.43 Financial Pulse</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{--navy:#082f49;--navy2:#0f172a;--teal:#0f9d8a;--bg:#f5f8fa;--card:#fff;--text:#163047;--muted:#64748b;--border:#dbe7ee;--red:#b91c1c;--amber:#a16207;--green:#047857}
@@ -1097,7 +1097,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
 @media(max-width:600px){.graph-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:400px){.graph-kpis{grid-template-columns:1fr}}
 
-/* v2.1.43 Payment Health Intelligence */
+/* v2.1.43 Financial Pulse */
 .payment-health-panel{border-top:1px solid var(--border)}
 .payment-health-hero{margin:12px 15px 10px;border:1px solid #cfe3ea;border-radius:13px;background:#f7fcfd;display:grid;grid-template-columns:1.05fr 1.95fr;gap:0;overflow:hidden}
 .payment-health-score{padding:16px;background:linear-gradient(135deg,#f1fbfa,#f7fcfd);border-right:1px solid #d9ebea;display:flex;gap:14px;align-items:center}
@@ -1174,7 +1174,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
     </div>
   </div>
 
-  <div class="notice"><b>v2.1.43:</b> Payment Health Intelligence connects cash position, ageing, payment integrity, recovery pressure and actionable next steps into one live management signal. Source relationships remain deterministic and grounded in recorded workspace data. Use fictional/de-identified development data only.</div>
+  <div class="notice"><b>v2.1.43:</b> Financial Pulse connects cash position, ageing, payment integrity, recovery pressure and actionable next steps into one live management signal. Source relationships remain deterministic and grounded in recorded workspace data. Use fictional/de-identified development data only.</div>
 
   <div class="kpis">
     <div class="kpi"><span>Invoices billed</span><strong id="billed">K0</strong><small id="invCount">0 invoices</small></div>
@@ -1186,13 +1186,13 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
 
   <section class="panel payment-health-panel" id="paymentHealthPanel">
     <div class="panel-head">
-      <div><h3>Payment Health Intelligence</h3><small>One live health signal for what is happening to cash, why pressure is building, and what should happen next.</small></div>
-      <div class="group"><span class="pill blue">v2.1.43 intelligence</span><button class="btn secondary" id="refreshPaymentHealth">Refresh health</button></div>
+      <div><h3>Financial Pulse</h3><small>The live intelligence layer for what is happening to hospital money, why pressure is building, and what should happen next.</small></div>
+      <div class="group"><span class="pill blue">v2.1.43 financial pulse</span><button class="btn secondary" id="refreshPaymentHealth">Refresh pulse</button></div>
     </div>
 
     <div class="payment-health-hero">
       <div class="payment-health-score">
-        <div class="payment-health-ring"><div><strong id="phScore">—</strong><small>/100</small></div></div>
+        <div class="payment-health-ring"><div><strong id="phScore">—</strong><small>health score</small></div></div>
         <div>
           <span class="pill blue" id="phState">CALCULATING</span>
           <h4 id="phHeadline">Payment position</h4>
@@ -1213,7 +1213,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
 
     <div class="payment-health-grid">
       <div class="payment-health-card">
-        <h4>Why the health score moved</h4>
+        <h4>Why the Financial Pulse moved</h4>
         <div id="phReasons"></div>
       </div>
       <div class="payment-health-card">
@@ -1232,7 +1232,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
       </div>
     </div>
 
-    <div class="payment-health-footnote">The health score is a deterministic management indicator derived from the current workspace records. Exposure categories can overlap, so flagged amounts are signals for investigation rather than additive loss estimates.</div>
+    <div class="payment-health-footnote">The Financial Pulse score is a deterministic management indicator derived from the current workspace records. Exposure categories can overlap, so flagged amounts are signals for investigation rather than additive loss estimates.</div>
   </section>
 
   <section class="panel" id="operationsPanel">
