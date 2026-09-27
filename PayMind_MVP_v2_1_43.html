@@ -1174,7 +1174,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
     </div>
   </div>
 
-  <div class="notice"><b>v2.1.43:</b> Added Outcome Intelligence: recorded action-to-outcome views, financial movement, control-state changes, evidence outcomes and an outcome ledger for claims and payers. Outcome narratives remain explicitly grounded in recorded workspace events and do not infer undocumented causation. Use fictional/de-identified development data only.</div>
+  <div class="notice"><b>v2.1.43:</b> Payment Health Intelligence connects cash position, ageing, payment integrity, recovery pressure and actionable next steps into one live management signal. Source relationships remain deterministic and grounded in recorded workspace data. Use fictional/de-identified development data only.</div>
 
   <div class="kpis">
     <div class="kpi"><span>Invoices billed</span><strong id="billed">K0</strong><small id="invCount">0 invoices</small></div>
@@ -7781,7 +7781,11 @@ function buildPaymentHealthIntelligence(){
 
   const collectionCoverage=billed?Math.min(100,(allocatedPaid/billed)*100):0;
   const outstandingRatio=billed?Math.min(1,outstanding/billed):0;
-  const claimPressure=openClaims.length?(agedClaims.length/openClaims.length):0;
+  // Value-weight the ageing signal: the score should respond to money at risk,
+  // not only the number of aged claims. This avoids a large-value aged claim
+  // population appearing artificially healthy because there are few records.
+  const claimPressure=billed?Math.min(1,agedClaimValue/billed):0;
+  const claimCountPressure=openClaims.length?(agedClaims.length/openClaims.length):0;
   const underRatio=billed?Math.min(1,underpayment/billed):0;
   const unmatchedRatio=allocatedPaid?Math.min(1,unmatched/Math.max(allocatedPaid,1)):unmatched?1:0;
   const actionPressure=(unresolved.length?Math.min(1,overdue.length/Math.max(unresolved.length,1)):0);
@@ -7799,7 +7803,7 @@ function buildPaymentHealthIntelligence(){
 
   const drivers=[
     {weight:outstandingRatio*35,label:'Outstanding balance is carrying '+Math.round(outstandingRatio*100)+'% of billed value.',meta:money(outstanding)+' remains open across '+invoices.filter(i=>Math.max(Number(i.amount||0)-(paidByInvoice.get(String(i.invoice_ref))||0),0)>0).length+' invoice(s).'},
-    {weight:claimPressure*25,label:'Ageing claims are adding collection pressure.',meta:money(agedClaimValue)+' is attached to open claims aged 60+ days.'},
+    {weight:claimPressure*25,label:'Ageing claims are adding collection pressure.',meta:money(agedClaimValue)+' is attached to open claims aged 60+ days ('+Math.round(claimPressure*100)+'% of billed value; '+Math.round(claimCountPressure*100)+'% of open claims).'},
     {weight:underRatio*22,label:'Underpayment signals are reducing payment integrity.',meta:money(underpayment)+' remains in unresolved underpayment exposure.'},
     {weight:unmatchedRatio*10,label:'Cash matching is incomplete.',meta:money(unmatched)+' in unmatched payment exposure needs reconciliation.'},
     {weight:actionPressure*8,label:'Recovery work is slipping behind its due dates.',meta:overdue.length+' recovery action(s) are overdue.'},
@@ -7836,7 +7840,11 @@ function renderPaymentHealth(){
   const d=buildPaymentHealthIntelligence();
   $('phScore').textContent=String(d.score);
   $('phState').textContent=d.status.toUpperCase();
-  $('phHeadline').textContent=d.status==='At risk'?'Cash and payment controls need attention':'Current payment position';
+  $('phHeadline').textContent=d.status==='At risk'
+    ?'Cash and payment controls need attention'
+    :d.agedClaimValue>0&&d.agedClaimValue/d.billed>=0.5
+      ?'Aged receivables are shaping the payment position'
+      :'Current payment position';
   $('phSummary').textContent=d.summary;
   $('phOutstanding').textContent=money(d.outstanding);
   $('phOutstandingMeta').textContent=d.outstanding?((d.billed?Math.round(d.outstanding/d.billed*100):0)+'% of billed value remains open'):'No open invoice balance';
