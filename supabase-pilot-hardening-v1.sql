@@ -60,12 +60,23 @@ create table if not exists public.recovery_transactions (
   recovery_reference text,
   note text,
   created_by uuid not null references auth.users(id),
-  created_at timestamptz not null default now(),
-  unique (id,hospital_id),
-  foreign key (exception_id,hospital_id)
-    references public.exceptions(id,hospital_id)
-    on delete cascade
+  created_at timestamptz not null default now()
 );
+
+alter table public.recovery_transactions
+  add constraint recovery_transactions_id_hospital_unique unique (id,hospital_id);
+
+alter table public.recovery_transactions
+  add constraint recovery_transactions_exception_hospital_fk
+  foreign key (exception_id,hospital_id)
+  references public.exceptions(id,hospital_id)
+  on delete cascade;
+
+alter table public.recovery_transactions
+  drop constraint if exists recovery_transactions_amount_check;
+
+alter table public.recovery_transactions
+  add constraint recovery_transactions_amount_check check (amount > 0);
 
 create table if not exists public.recovery_actions (
   id uuid primary key default gen_random_uuid(),
@@ -79,19 +90,56 @@ create table if not exists public.recovery_actions (
   completed_at timestamptz,
   created_by uuid not null references auth.users(id),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (id,hospital_id),
-  foreign key (exception_id,hospital_id)
-    references public.exceptions(id,hospital_id)
-    on delete cascade
+  updated_at timestamptz not null default now()
 );
+
+alter table public.recovery_actions
+  add constraint recovery_actions_id_hospital_unique unique (id,hospital_id);
+
+alter table public.recovery_actions
+  add constraint recovery_actions_exception_hospital_fk
+  foreign key (exception_id,hospital_id)
+  references public.exceptions(id,hospital_id)
+  on delete cascade;
+
+alter table public.recovery_actions
+  drop constraint if exists recovery_actions_status_check;
+
+alter table public.recovery_actions
+  add constraint recovery_actions_status_check
+  check (status in ('planned','in_progress','completed','cancelled'));
 
 create table if not exists public.recovery_evidence (
   id uuid primary key default gen_random_uuid(),
   hospital_id uuid not null references public.hospitals(id) on delete cascade,
   exception_id uuid not null,
-  recovery_transaction_id uuid,
-  evidence_type text not null
+  recovery_transaction_id uuid references public.recovery_transactions(id),
+  evidence_type text not null,
+  file_name text not null,
+  storage_path text not null,
+  mime_type text,
+  file_size bigint,
+  description text,
+  uploaded_by uuid not null references auth.users(id),
+  created_at timestamptz not null default now()
+);
+
+alter table public.recovery_evidence
+  add constraint recovery_evidence_id_hospital_unique unique (id,hospital_id);
+
+alter table public.recovery_evidence
+  add constraint recovery_evidence_exception_hospital_fk
+  foreign key (exception_id,hospital_id)
+  references public.exceptions(id,hospital_id)
+  on delete cascade;
+
+alter table public.recovery_evidence
+  drop constraint if exists recovery_evidence_evidence_type_check,
+  drop constraint if exists recovery_evidence_file_size_check,
+  drop constraint if exists recovery_evidence_storage_path_check;
+
+alter table public.recovery_evidence
+  add constraint recovery_evidence_evidence_type_check
     check (evidence_type in (
       'remittance_advice',
       'bank_confirmation',
@@ -100,24 +148,10 @@ create table if not exists public.recovery_evidence (
       'credit_note',
       'other'
     )),
-  file_name text not null,
-  storage_path text not null,
-  mime_type text,
-  file_size bigint check (file_size is null or (file_size >= 0 and file_size <= 10485760)),
-  description text,
-  uploaded_by uuid not null references auth.users(id),
-  created_at timestamptz not null default now(),
-  unique (id,hospital_id),
-  foreign key (exception_id,hospital_id)
-    references public.exceptions(id,hospital_id)
-    on delete cascade,
-  foreign key (recovery_transaction_id,hospital_id)
-    references public.recovery_transactions(id,hospital_id)
-    on delete set null,
-  check (
-    storage_path like hospital_id::text || '/' || exception_id::text || '/%'
-  )
-);
+  add constraint recovery_evidence_file_size_check
+    check (file_size is null or (file_size >= 0 and file_size <= 10485760)),
+  add constraint recovery_evidence_storage_path_check
+    check (storage_path like hospital_id::text || '/' || exception_id::text || '/%');
 
 create index if not exists idx_recovery_transactions_hospital_date
   on public.recovery_transactions(hospital_id,recovery_date desc,created_at desc);
@@ -224,6 +258,23 @@ create trigger trg_recovery_evidence_hospital_immutable
 before update on public.recovery_evidence
 for each row execute function public.prevent_hospital_id_change();
 
+create or replace function public.prevent_exception_action_identity_change()
+returns trigger
+language plpgsql
+as $
+begin
+  if new.exception_id is distinct from old.exception_id then
+    raise exception 'exception_id is immutable for exception actions';
+  end if;
+  return new;
+end;
+$;
+
+drop trigger if exists trg_exception_action_identity_immutable on public.exception_actions;
+create trigger trg_exception_action_identity_immutable
+before update on public.exception_actions
+for each row execute function public.prevent_exception_action_identity_change();
+
 create or replace function public.prevent_recovery_action_identity_change()
 returns trigger
 language plpgsql
@@ -240,6 +291,39 @@ drop trigger if exists trg_recovery_action_identity_immutable on public.recovery
 create trigger trg_recovery_action_identity_immutable
 before update on public.recovery_actions
 for each row execute function public.prevent_recovery_action_identity_change();
+
+create or replace function public.validate_recovery_evidence()
+returns trigger
+language plpgsql
+as $
+declare
+  tx_hospital uuid;
+  tx_exception uuid;
+begin
+  if new.recovery_transaction_id is not null then
+    select rt.hospital_id, rt.exception_id
+      into tx_hospital, tx_exception
+    from public.recovery_transactions rt
+    where rt.id = new.recovery_transaction_id;
+
+    if tx_hospital is null then
+      raise exception 'Linked recovery transaction does not exist';
+    end if;
+
+    if tx_hospital is distinct from new.hospital_id
+       or tx_exception is distinct from new.exception_id then
+      raise exception 'Evidence must reference a recovery transaction in the same hospital and exception';
+    end if;
+  end if;
+
+  return new;
+end;
+$;
+
+drop trigger if exists trg_validate_recovery_evidence on public.recovery_evidence;
+create trigger trg_validate_recovery_evidence
+before insert on public.recovery_evidence
+for each row execute function public.validate_recovery_evidence();
 
 create or replace function public.validate_recovery_transaction()
 returns trigger
@@ -591,7 +675,12 @@ create policy "PayMind evidence members can read"
 on storage.objects for select to authenticated
 using (
   bucket_id = 'paymind-recovery-evidence'
-  and public.user_in_hospital((storage.foldername(name))[1]::uuid)
+  and exists (
+    select 1
+    from public.hospital_members hm
+    where hm.hospital_id::text = (storage.foldername(name))[1]
+      and hm.user_id = auth.uid()
+  )
 );
 
 drop policy if exists "PayMind evidence finance users can upload" on storage.objects;
