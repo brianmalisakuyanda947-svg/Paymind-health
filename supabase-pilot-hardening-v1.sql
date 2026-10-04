@@ -48,7 +48,7 @@ alter table public.exceptions
   add constraint exceptions_recovery_fully_recovered_check
     check (recovery_status <> 'fully_recovered' or recovery_amount = exposure_amount);
 
-do $
+do $paymind$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -72,7 +72,7 @@ create table if not exists public.recovery_transactions (
   created_at timestamptz not null default now()
 );
 
-do $
+do $paymind$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -117,7 +117,7 @@ create table if not exists public.recovery_actions (
   updated_at timestamptz not null default now()
 );
 
-do $
+do $paymind$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -163,7 +163,7 @@ create table if not exists public.recovery_evidence (
   created_at timestamptz not null default now()
 );
 
-do $
+do $paymind$
 begin
   if not exists (
     select 1 from pg_constraint
@@ -248,7 +248,7 @@ language sql
 stable
 security definer
 set search_path = public
-as $$
+as $paymind$
   select exists (
     select 1
     from public.hospital_members hm
@@ -256,7 +256,7 @@ as $$
       and hm.user_id = auth.uid()
       and hm.role = any(allowed_roles)
   );
-$$;
+$paymind$;
 
 revoke all on function public.user_has_hospital_role(uuid,text[]) from public;
 grant execute on function public.user_has_hospital_role(uuid,text[]) to authenticated;
@@ -268,14 +268,14 @@ grant execute on function public.user_has_hospital_role(uuid,text[]) to authenti
 create or replace function public.prevent_hospital_id_change()
 returns trigger
 language plpgsql
-as $$
+as $paymind$
 begin
   if new.hospital_id is distinct from old.hospital_id then
     raise exception 'hospital_id is immutable';
   end if;
   return new;
 end;
-$$;
+$paymind$;
 
 drop trigger if exists trg_invoices_hospital_immutable on public.invoices;
 create trigger trg_invoices_hospital_immutable
@@ -315,14 +315,14 @@ for each row execute function public.prevent_hospital_id_change();
 create or replace function public.prevent_exception_action_identity_change()
 returns trigger
 language plpgsql
-as $
+as $paymind$
 begin
   if new.exception_id is distinct from old.exception_id then
     raise exception 'exception_id is immutable for exception actions';
   end if;
   return new;
 end;
-$;
+$paymind$;
 
 drop trigger if exists trg_exception_action_identity_immutable on public.exception_actions;
 create trigger trg_exception_action_identity_immutable
@@ -332,14 +332,14 @@ for each row execute function public.prevent_exception_action_identity_change();
 create or replace function public.prevent_recovery_action_identity_change()
 returns trigger
 language plpgsql
-as $$
+as $paymind$
 begin
   if new.exception_id is distinct from old.exception_id then
     raise exception 'exception_id is immutable for recovery actions';
   end if;
   return new;
 end;
-$$;
+$paymind$;
 
 drop trigger if exists trg_recovery_action_identity_immutable on public.recovery_actions;
 create trigger trg_recovery_action_identity_immutable
@@ -349,7 +349,7 @@ for each row execute function public.prevent_recovery_action_identity_change();
 create or replace function public.validate_recovery_evidence()
 returns trigger
 language plpgsql
-as $
+as $paymind$
 declare
   tx_hospital uuid;
   tx_exception uuid;
@@ -372,7 +372,7 @@ begin
 
   return new;
 end;
-$;
+$paymind$;
 
 drop trigger if exists trg_validate_recovery_evidence on public.recovery_evidence;
 create trigger trg_validate_recovery_evidence
@@ -382,7 +382,7 @@ for each row execute function public.validate_recovery_evidence();
 create or replace function public.validate_recovery_transaction()
 returns trigger
 language plpgsql
-as $$
+as $paymind$
 declare
   exposure numeric(14,2);
   current_total numeric(14,2);
@@ -409,7 +409,7 @@ begin
 
   return new;
 end;
-$$;
+$paymind$;
 
 drop trigger if exists trg_validate_recovery_transaction on public.recovery_transactions;
 create trigger trg_validate_recovery_transaction
@@ -419,7 +419,7 @@ for each row execute function public.validate_recovery_transaction();
 create or replace function public.sync_exception_recovery_from_transaction()
 returns trigger
 language plpgsql
-as $$
+as $paymind$
 declare
   total_recovered numeric(14,2);
   exposure numeric(14,2);
@@ -463,7 +463,7 @@ begin
 
   return new;
 end;
-$$;
+$paymind$;
 
 drop trigger if exists trg_sync_exception_recovery on public.recovery_transactions;
 create trigger trg_sync_exception_recovery
