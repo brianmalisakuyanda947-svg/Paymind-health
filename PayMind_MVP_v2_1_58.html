@@ -3465,6 +3465,37 @@ async function updateRecoveryActionStatus(id,actionId,status){
   openExceptionDetail(id);
 }
 
+async function openRecoveryEvidence(evidenceId){
+  if(!state.active)return;
+  const evidence=(state.recoveryEvidence||[]).find(e=>e.id===evidenceId);
+  if(!evidence){
+    alert('The evidence record could not be found.');
+    return;
+  }
+
+  // Open a tab immediately so the browser treats it as a user-initiated action.
+  const win=window.open('about:blank','_blank','noopener,noreferrer');
+  if(!win){
+    alert('Please allow pop-ups for PayMind to view recovery evidence.');
+    return;
+  }
+
+  try{
+    const signed=await sb.storage
+      .from(RECOVERY_BUCKET)
+      .createSignedUrl(evidence.storage_path,120);
+
+    if(signed.error||!signed.data?.signedUrl){
+      throw new Error(signed.error?.message||'A secure evidence link could not be created.');
+    }
+
+    win.location.href=signed.data.signedUrl;
+  }catch(err){
+    try{win.close();}catch(_e){}
+    alert('Could not open evidence: '+err.message);
+  }
+}
+
 async function uploadRecoveryEvidence(id){
   if(!canManageExceptions())return;
   const ex=state.exceptionCases.find(e=>e.id===id);if(!ex)return;
