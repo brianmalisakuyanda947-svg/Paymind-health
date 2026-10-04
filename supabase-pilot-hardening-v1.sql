@@ -48,8 +48,17 @@ alter table public.exceptions
   add constraint exceptions_recovery_fully_recovered_check
     check (recovery_status <> 'fully_recovered' or recovery_amount = exposure_amount);
 
-alter table public.exceptions
-  add constraint exceptions_id_hospital_unique unique (id,hospital_id);
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'exceptions_id_hospital_unique'
+      and conrelid = 'public.exceptions'::regclass
+  ) then
+    alter table public.exceptions
+      add constraint exceptions_id_hospital_unique unique (id,hospital_id);
+  end if;
+end $;
 
 create table if not exists public.recovery_transactions (
   id uuid primary key default gen_random_uuid(),
@@ -63,14 +72,29 @@ create table if not exists public.recovery_transactions (
   created_at timestamptz not null default now()
 );
 
-alter table public.recovery_transactions
-  add constraint recovery_transactions_id_hospital_unique unique (id,hospital_id);
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_transactions_id_hospital_unique'
+      and conrelid = 'public.recovery_transactions'::regclass
+  ) then
+    alter table public.recovery_transactions
+      add constraint recovery_transactions_id_hospital_unique unique (id,hospital_id);
+  end if;
 
-alter table public.recovery_transactions
-  add constraint recovery_transactions_exception_hospital_fk
-  foreign key (exception_id,hospital_id)
-  references public.exceptions(id,hospital_id)
-  on delete cascade;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_transactions_exception_hospital_fk'
+      and conrelid = 'public.recovery_transactions'::regclass
+  ) then
+    alter table public.recovery_transactions
+      add constraint recovery_transactions_exception_hospital_fk
+      foreign key (exception_id,hospital_id)
+      references public.exceptions(id,hospital_id)
+      on delete cascade;
+  end if;
+end $;
 
 alter table public.recovery_transactions
   drop constraint if exists recovery_transactions_amount_check;
@@ -93,14 +117,29 @@ create table if not exists public.recovery_actions (
   updated_at timestamptz not null default now()
 );
 
-alter table public.recovery_actions
-  add constraint recovery_actions_id_hospital_unique unique (id,hospital_id);
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_actions_id_hospital_unique'
+      and conrelid = 'public.recovery_actions'::regclass
+  ) then
+    alter table public.recovery_actions
+      add constraint recovery_actions_id_hospital_unique unique (id,hospital_id);
+  end if;
 
-alter table public.recovery_actions
-  add constraint recovery_actions_exception_hospital_fk
-  foreign key (exception_id,hospital_id)
-  references public.exceptions(id,hospital_id)
-  on delete cascade;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_actions_exception_hospital_fk'
+      and conrelid = 'public.recovery_actions'::regclass
+  ) then
+    alter table public.recovery_actions
+      add constraint recovery_actions_exception_hospital_fk
+      foreign key (exception_id,hospital_id)
+      references public.exceptions(id,hospital_id)
+      on delete cascade;
+  end if;
+end $;
 
 alter table public.recovery_actions
   drop constraint if exists recovery_actions_status_check;
@@ -124,14 +163,29 @@ create table if not exists public.recovery_evidence (
   created_at timestamptz not null default now()
 );
 
-alter table public.recovery_evidence
-  add constraint recovery_evidence_id_hospital_unique unique (id,hospital_id);
+do $
+begin
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_evidence_id_hospital_unique'
+      and conrelid = 'public.recovery_evidence'::regclass
+  ) then
+    alter table public.recovery_evidence
+      add constraint recovery_evidence_id_hospital_unique unique (id,hospital_id);
+  end if;
 
-alter table public.recovery_evidence
-  add constraint recovery_evidence_exception_hospital_fk
-  foreign key (exception_id,hospital_id)
-  references public.exceptions(id,hospital_id)
-  on delete cascade;
+  if not exists (
+    select 1 from pg_constraint
+    where conname = 'recovery_evidence_exception_hospital_fk'
+      and conrelid = 'public.recovery_evidence'::regclass
+  ) then
+    alter table public.recovery_evidence
+      add constraint recovery_evidence_exception_hospital_fk
+      foreign key (exception_id,hospital_id)
+      references public.exceptions(id,hospital_id)
+      on delete cascade;
+  end if;
+end $;
 
 alter table public.recovery_evidence
   drop constraint if exists recovery_evidence_evidence_type_check,
