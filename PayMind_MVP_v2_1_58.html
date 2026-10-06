@@ -3473,14 +3473,14 @@ async function openRecoveryEvidence(evidenceId){
     return;
   }
 
-  // Open a tab immediately so the browser treats it as a user-initiated action.
-  const win=window.open('about:blank','_blank','noopener,noreferrer');
-  if(!win){
-    alert('Please allow pop-ups for PayMind to view recovery evidence.');
-    return;
+  const button=document.querySelector('[data-modal-evidence="'+CSS.escape(evidenceId)+'"]');
+  if(button){
+    button.disabled=true;
+    button.textContent='Opening…';
   }
 
   try{
+    // Generate a short-lived signed URL from the private storage bucket.
     const signed=await sb.storage
       .from(RECOVERY_BUCKET)
       .createSignedUrl(evidence.storage_path,120);
@@ -3489,10 +3489,15 @@ async function openRecoveryEvidence(evidenceId){
       throw new Error(signed.error?.message||'A secure evidence link could not be created.');
     }
 
-    win.location.href=signed.data.signedUrl;
+    // Safari can block a post-await popup. Navigating the current tab is
+    // reliable and keeps the underlying Storage object private.
+    window.location.assign(signed.data.signedUrl);
   }catch(err){
-    try{win.close();}catch(_e){}
     alert('Could not open evidence: '+err.message);
+    if(button){
+      button.disabled=false;
+      button.textContent='View';
+    }
   }
 }
 
