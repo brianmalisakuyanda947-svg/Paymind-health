@@ -171,3 +171,10 @@ The payment/claims export unit tests were included in the successful post-merge 
 - `paymind-claims-2026-10-11`: opened successfully; eight claim records displayed with claim reference, invoice reference, payer, submitted date, amount and status.
 
 These manual checks verify normal export/download and file readability for the demonstrated workspace. They do not replace adversarial formula-safety checks or multi-hospital isolation tests against live exported data. Session/logout expiry, backup/restore and broader workflow regression remain open.
+
+
+## Manual sign-out smoke test — 2026-10-11
+
+**Partial pass:** the user clicked `Sign out` and the app displayed the PayMind sign-in screen. This confirms the normal logout navigation path. The screenshot showed the email and password fields autofilled by Safari; that is browser autofill, not proof of an authenticated app session.
+
+**Still required:** while not signing in again, open the app URL in a new tab and refresh it. The app should remain on the sign-in screen with no protected financial records loaded. Then test the browser Back button; if it briefly restores a cached dashboard, verify protected data cannot be refreshed or fetched without authentication and treat any displayed sensitive data after logout as a UI-cache concern. Do not mark session security fully passed until these checks and session-expiry testing are complete.
