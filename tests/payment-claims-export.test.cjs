@@ -125,7 +125,7 @@ test('neutralises spreadsheet formulas in payment export text', () => {
 });
 
 test('exports selected hospital claims with template-compatible columns', () => {
-  const result = runExport('exportClaimsCSV', 'downloadTemplate(type)', 'claims', [
+  const result = runExport('exportClaimsCSV', 'downloadTemplate', 'claims', [
     {
       hospital_id: 'hospital-a',
       claim_ref: 'CLM-101',
@@ -173,7 +173,7 @@ test('prevents non-finance roles and empty collections from exporting', () => {
   assert.equal(denied.downloads.length, 0);
   assert.equal(denied.alerts.length, 1);
 
-  const empty = runExport('exportClaimsCSV', 'downloadTemplate(type)', 'claims', []);
+  const empty = runExport('exportClaimsCSV', 'downloadTemplate', 'claims', []);
   assert.equal(empty.downloads.length, 0);
   assert.equal(empty.alerts.length, 1);
 });
