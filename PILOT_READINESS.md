@@ -142,3 +142,12 @@ The focused SQL tests and signed-URL document-view test have passed in the demon
 7. Design the write-off accounting workflow before reintroducing it.
 8. Complete backup/restore, session-expiry and full workflow regression tests.
 9. Do not load real hospital/patient financial data until these gates pass.
+
+
+## Audit spoof test follow-up — 2026-10-11
+
+The database-generated invoice audit test returned one audit row, but a simulated authenticated client insert with `source='database_trigger'` and an event type in the reserved `db_*` namespace was accepted. Gate 3 is therefore **not passed**.
+
+A likely cause is another permissive `INSERT` or `ALL` policy on `audit_logs` (permissive policies are ORed). The review branch now includes `supabase-pilot-audit-v3-policy-fix.sql`, which enables RLS, drops all existing `INSERT` / `ALL` policies for `audit_logs`, recreates a hospital-scoped SELECT policy, and installs a single client-only INSERT policy. It intentionally leaves the database audit triggers unchanged.
+
+**Required next steps:** run v3 after v2, inspect the listed policies, rerun the audit spoof test, require `PASS — client spoof was rejected by RLS`, then separately confirm that rollback left no `PAYMIND-AUDIT-TEST-%` invoices or forged test rows.
