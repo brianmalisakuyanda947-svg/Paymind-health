@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - pilot-readiness-audit-v1
+      - add-invoice-export-v1
 
 permissions:
   contents: read
