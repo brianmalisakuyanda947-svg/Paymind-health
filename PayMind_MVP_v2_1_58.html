@@ -2904,6 +2904,17 @@ const age = d => {
   return Number.isNaN(x.getTime()) ? 0 : Math.max(0,Math.floor((n-x)/86400000));
 };
 const esc = v => String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+const jsargContent = v => String(v??'')
+  .replace(/\\/g,'\\\\')
+  .replace(/'/g,"\\'")
+  .replace(/\r/g,'\\r')
+  .replace(/\n/g,'\\n')
+  .replace(/\u2028/g,'\\u2028')
+  .replace(/\u2029/g,'\\u2029')
+  .replace(/&/g,'&amp;')
+  .replace(/"/g,'&quot;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;');
 const roleName = r => String(r||'member').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 const statusLabel = s => String(s||'open').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 const priorityClass = p => p==='high'?'red':p==='low'?'blue':'amber';
@@ -3749,7 +3760,7 @@ function renderFinanceWorkPlanner(){
       '<td>'+esc(recoveryActionLabel(a.status))+'</td>'+
       '<td>'+esc(a.due_date||'—')+overdueMark+dueSoonMark+'</td>'+
       '<td><span class="v19-owner">'+esc(a.owner_id===state.user?.id?'You':(a.owner_id?'Assigned':'Unassigned'))+'</span></td>'+
-      '<td><button class="btn secondary" style="padding:5px 4px;font-size:8px" onclick="openExceptionDetail(\''+esc(a.exception_id)+'\')">Manage</button> '+
+      '<td><button class="btn secondary" style="padding:5px 4px;font-size:8px" onclick="openExceptionDetail(\''+jsargContent(a.exception_id)+'\')">Manage</button> '+
       '<button class="btn secondary" style="padding:5px 7px;font-size:9px" data-v19-action="'+esc(a.id)+'" data-v19-ex="'+esc(a.exception_id)+'">'+statusBtn+'</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="5" class="v19-empty">No recovery actions match this view.</td></tr>';
@@ -4326,7 +4337,7 @@ function safeRenderPayerReconciliation(){
           '<div class="v21-bar"><span style="width:'+Math.max(5,Math.min(100,r.exceptions?recRate:100))+'%"></span></div>'+
           '<div class="v21-muted">Recovery '+recRate+'%</div></td>'+
         '<td><span class="v21-status '+cls+'">'+esc(r.signal)+'</span><div class="v21-muted">'+esc(r.next)+'</div></td>'+
-        '<td><div class="v21-action"><button class="btn secondary" onclick="focusPayerExceptions(\''+esc(r.payer)+'\')">Review exceptions</button><button class="btn primary" onclick="openPayerNextStep(\''+esc(r.payer)+'\')">'+esc(payerNextStepLabel(r.signal))+'</button></div></td>'+
+        '<td><div class="v21-action"><button class="btn secondary" onclick="focusPayerExceptions(\''+jsargContent(r.payer)+'\')">Review exceptions</button><button class="btn primary" onclick="openPayerNextStep(\''+jsargContent(r.payer)+'\')">'+esc(payerNextStepLabel(r.signal))+'</button></div></td>'+
       '</tr>';
     }).join(''):'<tr><td colspan="11" class="v21-empty">No payers match this view.</td></tr>';
   }catch(err){
@@ -4552,7 +4563,7 @@ function renderManagementAlerts(){
   $('v202AlertBody').innerHTML=visible.length?visible.slice(0,20).map(a=>{
     const badge=a.severity==='critical'?'v202-badge-critical':a.severity==='high'?'v202-badge-high':a.severity==='medium'?'v202-badge-medium':'v202-badge-watch';
     const management=a.id
-      ? '<div class="v202-btns"><button class="btn secondary" onclick="openExceptionDetail(\''+esc(a.id)+'\')">Manage</button><button class="btn primary" onclick="logManagementEscalation(\''+esc(a.id)+'\',\''+esc(a.title)+'\')">Escalate</button></div>'
+      ? '<div class="v202-btns"><button class="btn secondary" onclick="openExceptionDetail(\''+jsargContent(a.id)+'\')">Manage</button><button class="btn primary" onclick="logManagementEscalation(\''+jsargContent(a.id)+'\',\''+jsargContent(a.title)+'\')">Escalate</button></div>'
       : '<div class="v202-btns"><button class="btn secondary" data-v202-claims="1">Review claims</button></div>';
     return '<div class="v202-alert">'+
       '<div class="v202-severity"><span class="'+badge+'">'+esc(a.severity)+'</span></div>'+
@@ -5480,7 +5491,7 @@ function renderRelationshipGraph(){
   $('graphLedgerCount').textContent=g.records.length+' records';
   $('graphLedgerBody').innerHTML=g.records.map(r=>{
     const openable=['claim','invoice','exception','payer'].includes(r.type);
-    const btn=openable?'<button class="btn secondary graph-open-btn" onclick="graphOpenRecord(\''+esc(r.type)+'\',\''+esc(r.openRef||r.ref)+'\')">Open</button>':'—';
+    const btn=openable?'<button class="btn secondary graph-open-btn" onclick="graphOpenRecord(\''+jsargContent(r.type)+'\',\''+jsargContent(r.openRef||r.ref)+'\')">Open</button>':'—';
     return '<tr><td>'+esc(r.type)+'</td><td><b>'+esc(r.ref)+'</b></td><td>'+esc(r.payer||g.payer)+'</td><td>'+esc(r.relationship)+'</td><td>'+esc(r.amount===null||r.amount===undefined?'—':money(r.amount))+'</td><td>'+esc(r.status||'recorded')+'</td><td>'+btn+'</td></tr>';
   }).join('')||'<tr><td colspan="7" class="v21-empty">No connected records.</td></tr>';
 }
@@ -5555,7 +5566,7 @@ function renderUnifiedIntelligence(){
     const payer=payerBySafe(g.payer,d.payerProfiles);
     const payerText=payer?payerIntelActionSignal(payer).title:'No current payer signal';
     const next=g.early[0]?.next||g.root[0]?.next||'Review the related payer/claim record.';
-    let open='<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openUnifiedRecord(\''+esc(g.ref)+'\',\''+esc(g.payer)+'\')">Open</button>';
+    let open='<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openUnifiedRecord(\''+jsargContent(g.ref)+'\',\''+jsargContent(g.payer)+'\')">Open</button>';
     return '<tr>'+
       '<td><b>'+esc(g.ref)+'</b></td>'+
       '<td>'+esc(g.payer)+'</td>'+
@@ -5766,12 +5777,12 @@ function renderEarlyWarnings(){
   $('earlyWarningBody').innerHTML=visible.length?visible.slice(0,30).map(s=>{
     const target=()=>{
       if(s.targetType==='claim'){
-        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+esc(s.ref)+'\')">Review</button>';
+        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+jsargContent(s.ref)+'\')">Review</button>';
       }
       if(s.targetType==='exception'){
-        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetail(\''+esc(s.exceptionId)+'\')">Manage</button>';
+        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetail(\''+jsargContent(s.exceptionId)+'\')">Manage</button>';
       }
-      return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+esc(s.payer)+'\')">Open payer</button>';
+      return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+jsargContent(s.payer)+'\')">Open payer</button>';
     };
     return '<tr>'+
       '<td><span class="ew-domain">'+esc(s.domain)+'</span></td>'+
@@ -6091,7 +6102,7 @@ function renderPayerIntelligence(){
       '<td class="v21-money">'+money(x.claims90Value)+'</td>'+
       '<td><b>'+money(x.recovered)+'</b><div class="v21-muted">'+x.recoveryRate+'% recorded</div></td>'+
       '<td><span class="payer-signal '+sigClass+'">'+esc(sig.title)+'</span></td>'+
-      '<td><button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+esc(x.payer)+'\')">Open profile</button></td>'+
+      '<td><button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+jsargContent(x.payer)+'\')">Open profile</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="9" class="v21-empty">No payer profiles match this view.</td></tr>';
 }
@@ -6199,7 +6210,7 @@ function renderFinanceIntelligenceCenter(){
       '<td><span class="v20-badge '+sigClass+'">'+esc(x.signal)+'</span></td>'+
       '<td>'+ (evidenceByEx.has(x.e.id)?'<span class="v20-badge good">Covered</span>':'<span class="v20-badge gap">Gap</span>') +'</td>'+
       '<td>'+esc(x.next)+'</td>'+
-      '<td><button class="btn secondary" style="padding:5px 7px;font-size:9px" onclick="openExceptionDetail(\''+esc(x.e.id)+'\')">Manage</button></td>'+
+      '<td><button class="btn secondary" style="padding:5px 7px;font-size:9px" onclick="openExceptionDetail(\''+jsargContent(x.e.id)+'\')">Manage</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="7" class="v20-empty">No unresolved exceptions.</td></tr>';
 
@@ -6428,7 +6439,7 @@ function renderClaimControlTower(){
       '<td>'+esc(nextDate)+'</td>'+
       '<td><div class="claim-tower-outcome">'+esc(item.outcome)+'</div></td>'+
       '<td><b class="claim-tower-next">'+esc(nextStep)+'</b></td>'+
-      '<td><button class="btn '+((item.kind==='overdue'||item.kind==='today')?'primary':'secondary')+'" style="padding:5px 7px;font-size:8px;white-space:nowrap" onclick="openClaimReview(\''+esc(c.claim_ref)+'\')">'+buttonLabel+'</button></td>'+
+      '<td><button class="btn '+((item.kind==='overdue'||item.kind==='today')?'primary':'secondary')+'" style="padding:5px 7px;font-size:8px;white-space:nowrap" onclick="openClaimReview(\''+jsargContent(c.claim_ref)+'\')">'+buttonLabel+'</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="10" class="v18-empty">No claims match this control view.</td></tr>';
 
@@ -6757,7 +6768,7 @@ function renderClaims(){
       <td>${esc(c.status)}</td>
       <td><span class="pill ${cls}">${label}</span>${c.invoice_ref?` <span style="font-size:9px;color:var(--muted)">${esc(c.invoice_ref)}</span>`:''}</td>
       <td class="queue-actions">
-        <button class="btn ${buttonClass}" style="padding:6px 9px;font-size:9px" onclick="openClaimReview('${esc(c.claim_ref)}')">${buttonLabel}</button>${meta}
+        <button class="btn ${buttonClass}" style="padding:6px 9px;font-size:9px" onclick="openClaimReview('${jsargContent(c.claim_ref)}')">${buttonLabel}</button>${meta}
       </td>
     </tr>`;
   }).join(''):'<tr><td colspan="8" class="empty">No claims meet this threshold.</td></tr>';
@@ -7595,8 +7606,8 @@ function renderRootCauseIntelligence(){
   $('rootSignalBody').innerHTML=visible.length?visible.slice(0,20).map(x=>{
     const kindClass=rootCauseIndicatorClass(x.kind);
     const management=x.domain==='claims'
-      ? '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+esc(x.ref)+'\')">Review</button>'
-      : '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetailByReference(\''+esc(x.ref)+'\')">Manage</button>';
+      ? '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+jsargContent(x.ref)+'\')">Review</button>'
+      : '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetailByReference(\''+jsargContent(x.ref)+'\')">Manage</button>';
     return '<tr>'+
       '<td><span class="root-domain">'+esc(x.domain)+'</span></td>'+
       '<td><b>'+esc(x.ref)+'</b></td>'+
@@ -8290,7 +8301,7 @@ function renderFinancialOutlook(){
   $('outlookActions').innerHTML=actions.map(x=>{
     const btn=x.type==='ops'
       ?'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(null,null,null)">Open operations</button>'
-      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+esc(x.ref)+'\',\''+esc(x.type)+'\',null)">Open</button>';
+      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+jsargContent(x.ref)+'\',\''+jsargContent(x.type)+'\',null)">Open</button>';
     return '<div class="outlook-driver"><div><b>'+esc(x.title)+'</b><small>'+esc(x.meta)+'</small></div>'+btn+'</div>';
   }).join('');
 
@@ -8650,7 +8661,7 @@ function renderPaymentHealth(){
   $('phActions').innerHTML=d.actions.map(x=>{
     const btn=x.type==='ops'
       ?'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(null,null,null)">Open operations</button>'
-      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+esc(x.ref)+'\',\''+esc(x.type)+'\',null)">Open</button>';
+      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+jsargContent(x.ref)+'\',\''+jsargContent(x.type)+'\',null)">Open</button>';
     return '<div class="payment-health-action"><div><b>'+esc(x.title)+'</b><small>'+esc(x.meta)+'</small></div>'+btn+'</div>';
   }).join('');
 }
