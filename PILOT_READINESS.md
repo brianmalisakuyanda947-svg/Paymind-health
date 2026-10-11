@@ -182,6 +182,8 @@ These manual checks verify normal export/download and file readability for the d
 
 ## Signed-out new-tab revisit check — 2026-10-11
 
-**PASS for the demonstrated path:** after signing out, the user opened the published PayMind URL in a new Safari tab. The application displayed the sign-in screen with blank email/password fields rather than the hospital dashboard.
+**PASS for demonstrated paths (2026-10-11):**
+- After signing out, opening the published PayMind URL in a new Safari tab displayed the sign-in screen with blank email/password fields rather than the hospital dashboard.
+- Refreshing the signed-out page with Cmd+R continued to display the sign-in screen.
 
-**Still required:** test browser Back/Forward behaviour in the tab that was previously authenticated, confirm protected records cannot be reloaded or queried after sign-out, and test session/token expiry. This is a useful smoke test but not a complete session-security assessment.
+**Still required:** test browser Back/Forward behaviour in the tab that was previously authenticated where browser history permits it, verify protected records cannot be reloaded or queried after sign-out, and test session/token expiry. These are useful smoke tests but not a complete session-security assessment.
