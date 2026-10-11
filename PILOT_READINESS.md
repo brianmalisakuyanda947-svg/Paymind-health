@@ -146,8 +146,8 @@ The focused SQL tests and signed-URL document-view test have passed in the demon
 
 ## Audit spoof test follow-up — 2026-10-11
 
-The database-generated invoice audit test returned one audit row, but a simulated authenticated client insert with `source='database_trigger'` and an event type in the reserved `db_*` namespace was accepted. Gate 3 is therefore **not passed**.
+The first audit test created one database-generated audit row but the client spoof attempt was accepted. The additional migration `supabase-pilot-audit-v3-policy-fix.sql` was then applied in Supabase. The policy inspection showed RLS enabled and only the intended member SELECT and restricted INSERT policies.
 
-A likely cause is another permissive `INSERT` or `ALL` policy on `audit_logs` (permissive policies are ORed). The review branch now includes `supabase-pilot-audit-v3-policy-fix.sql`, which enables RLS, drops all existing `INSERT` / `ALL` policies for `audit_logs`, recreates a hospital-scoped SELECT policy, and installs a single client-only INSERT policy. It intentionally leaves the database audit triggers unchanged.
+**Retest result (2026-10-11): PASS for the exercised path.** The invoice insert generated exactly one audit row, the authenticated client spoof attempt was rejected by RLS, and the temporary invoice was visible as one row before `ROLLBACK`.
 
-**Required next steps:** run v3 after v2, inspect the listed policies, rerun the audit spoof test, require `PASS — client spoof was rejected by RLS`, then separately confirm that rollback left no `PAYMIND-AUDIT-TEST-%` invoices or forged test rows.
+**Still required:** run a post-rollback cleanup check and confirm both the temporary invoice count and forged-event count are zero. Gate 3 should not be marked fully closed until that cleanup check and the remaining regression tests are complete.
