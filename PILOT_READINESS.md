@@ -161,3 +161,13 @@ PR #6 was merged as `5fb938e830c25c86fdc45c775649f9341549147f`. The app now incl
 The payment/claims export unit tests were included in the successful post-merge safety-test run: https://github.com/brianmalisakuyanda947-svg/Paymind-health/actions/runs/38159688776.
 
 **Still required:** verify the new buttons in Safari after GitHub Pages deployment completes, open both files in Numbers/Excel, and confirm only the selected hospital's data is present. This confirms ordinary export readability but does not replace adversarial formula-safety verification.
+
+
+## Manual payment and claims export smoke tests — 2026-10-11
+
+**PASS:** After PR #6 deployment, the user opened both downloaded exports in Apple Numbers.
+
+- `paymind-payments-2026-10-11`: opened successfully; eight payment records displayed with payment reference, invoice reference, payment date, amount, payer and payment method.
+- `paymind-claims-2026-10-11`: opened successfully; eight claim records displayed with claim reference, invoice reference, payer, submitted date, amount and status.
+
+These manual checks verify normal export/download and file readability for the demonstrated workspace. They do not replace adversarial formula-safety checks or multi-hospital isolation tests against live exported data. Session/logout expiry, backup/restore and broader workflow regression remain open.
