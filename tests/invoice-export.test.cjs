@@ -21,7 +21,7 @@ assert.notEqual(exportEnd, -1, 'invoice export function must have an end marker'
 const helperSource = html.slice(helperStart, helperEnd);
 const exportSource = html.slice(exportStart, exportEnd);
 
-function runExport(invoices, active = { hospital_id: 'hospital-a' }) {
+function runExport(invoices, active = { hospital_id: 'hospital-a', role: 'finance_manager' }) {
   const downloads = [];
   const alerts = [];
   let savedBlob = null;
@@ -43,6 +43,7 @@ function runExport(invoices, active = { hospital_id: 'hospital-a' }) {
   }
   const sandbox = {
     state: { active, invoices },
+    canManageExceptions: () => ['admin', 'finance_manager', 'finance_officer'].includes(active?.role),
     alert: message => alerts.push(message),
     Blob: TestBlob,
     URL: {
@@ -110,4 +111,46 @@ test('does not download when no workspace is selected or no invoices are loaded'
   const noInvoices = runExport([]);
   assert.equal(noInvoices.downloads.length, 0);
   assert.equal(noInvoices.alerts.length, 1);
+});
+
+
+test('exports only invoices from the selected hospital', () => {
+  const result = runExport([
+    {
+      hospital_id: 'hospital-a',
+      invoice_ref: 'INV-OWN',
+      invoice_date: '2026-10-10',
+      amount: 10,
+      payer: 'Own Hospital',
+      department: 'Outpatient',
+      status: 'open'
+    },
+    {
+      hospital_id: 'hospital-b',
+      invoice_ref: 'INV-OTHER',
+      invoice_date: '2026-10-10',
+      amount: 99,
+      payer: 'Other Hospital',
+      department: 'Outpatient',
+      status: 'open'
+    }
+  ]);
+  const csv = result.blob.parts.join('');
+  assert.ok(csv.includes('INV-OWN'));
+  assert.ok(!csv.includes('INV-OTHER'));
+});
+
+test('prevents non-finance roles from exporting invoices', () => {
+  const result = runExport([{
+    hospital_id: 'hospital-a',
+    invoice_ref: 'INV-101',
+    invoice_date: '2026-10-10',
+    amount: 15000,
+    payer: 'Example Insurance',
+    department: 'Outpatient',
+    status: 'open'
+  }], { hospital_id: 'hospital-a', role: 'viewer' });
+
+  assert.equal(result.downloads.length, 0);
+  assert.equal(result.alerts.length, 1);
 });
