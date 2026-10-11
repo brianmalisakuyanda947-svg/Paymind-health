@@ -2718,7 +2718,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
     </div>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Date</th><th>Event</th><th>Entity</th><th>Reference</th><th>Detail</th></tr></thead>
+        <thead><tr><th>Date</th><th>Event</th><th>Source</th><th>Entity</th><th>Reference</th><th>Detail</th></tr></thead>
         <tbody id="auditBody"></tbody>
       </table>
     </div>
@@ -8071,14 +8071,20 @@ function renderAudit(){
   const list=state.audits||[];
   $('auditBody').innerHTML=list.length?list.map(a=>{
     const type=a.event_type||'';
+    const source=a.source==='database_trigger'
+      ? 'Database verified'
+      : a.source==='client'
+        ? 'Client activity'
+        : 'Legacy event';
     return '<tr>'+
       '<td>'+new Date(a.created_at).toLocaleString()+'</td>'+
       '<td><span class="audit-badge">'+esc(auditEventLabel(type))+'</span></td>'+
+      '<td>'+esc(source)+'</td>'+
       '<td>'+esc(String(a.entity_type||'').replaceAll('_',' '))+'</td>'+
       '<td><b>'+esc(a.reference_text||'')+'</b></td>'+
       '<td style="min-width:460px">'+renderAuditDetail(a)+'</td>'+
       '</tr>';
-  }).join(''):'<tr><td colspan="5" class="empty">No audit events recorded yet.</td></tr>';
+  }).join(''):'<tr><td colspan="6" class="empty">No audit events recorded yet.</td></tr>';
 }
 
 function render(){
