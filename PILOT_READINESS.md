@@ -82,3 +82,34 @@ Before merging `pilot-hardening-v0.1` to `main`:
 ## Release rule
 
 Do not put real hospital/patient financial data into the pilot until the security tests above pass and the Supabase project confirms the hardened RLS/storage policies are active.
+
+
+## Additional static-review findings — 2026-10-11
+
+### 7. Inline event-handler argument encoding — HIGH
+
+A number of dashboard buttons pass database-derived values (including claim references and payer names) into inline JavaScript handlers. HTML escaping alone is insufficient because HTML character references are decoded before the browser parses the event-handler JavaScript.
+
+**Action in branch `pilot-readiness-audit-v1`:** dynamic arguments in inline event-handler attributes are now escaped for JavaScript string-content context and then for the containing HTML attribute. This is a defense-in-depth fix; before pilot sign-off, review whether any other dynamically generated inline handlers remain and consider replacing inline handlers with delegated event listeners entirely.
+
+### 8. Recovery status model mismatch — HIGH
+
+The recovery-status control in the UI offers `in_progress` and `written_off`, while the current database constraint on `exceptions.recovery_status` only accepts `not_started`, `partially_recovered` and `fully_recovered`. The UI can therefore offer values that the database rejects. The write-off path also lacks a dedicated amount/reason record, although resolving an exception relies on the `written_off` status.
+
+**Action required:** define the intended write-off workflow and data fields; align UI options, database constraints, recovery totals and resolution rules in one reviewed migration. Do not simply broaden the check constraint without defining write-off accounting semantics.
+
+### 9. Audit-log authenticity — HIGH
+
+The client-facing audit-log insert policy restricts `user_id` to the authenticated user and scopes rows to the user's hospital, but an authenticated member can still submit arbitrary `event_type` and `detail` values for that hospital. Append-only access prevents later edits/deletes; it does not by itself prove that each event represents a real workflow action.
+
+**Action required:** for a real-data pilot, move security-critical audit creation to database triggers or validated server-side functions/RPCs, and review which events must be authoritative.
+
+### 10. CSV formula injection — MEDIUM
+
+CSV exports quote fields containing commas, quotes or newlines, but quoting alone does not prevent spreadsheet formula execution when a cell begins with characters such as `=`, `+`, `-` or `@`.
+
+**Action required:** centralise CSV cell serialization and neutralise formula-leading values across all exports, then test with malicious-looking payer names, references and notes.
+
+## Updated pilot decision
+
+The focused SQL tests and signed-URL document-view test have passed in the demonstrated workspace. The product is **not yet approved for real hospital data**: address the recovery-status/write-off mismatch and audit-log authenticity design before pilot sign-off, and merge the inline-handler hardening only after review/testing.
