@@ -1569,6 +1569,8 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
       <button class="btn secondary" data-template="payments">Download payment template</button>
       <button class="btn secondary" data-template="claims">Download claims template</button>
       <button class="btn secondary" id="exportInvoicesCsv">Download existing invoices CSV</button>
+      <button class="btn secondary" id="exportPaymentsCsv">Download existing payments CSV</button>
+      <button class="btn secondary" id="exportClaimsCsv">Download existing claims CSV</button>
     </div>
     <div id="uploadStatus" class="status-box"></div>
     <div id="validation" class="validation"></div>
@@ -8882,6 +8884,90 @@ function exportInvoicesCSV(){
   window.setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
+function exportPaymentsCSV(){
+  if(!state.active){
+    alert('Select a hospital workspace before exporting payments.');
+    return;
+  }
+  if(!canManageExceptions()){
+    alert('Your role is not permitted to export payment data.');
+    return;
+  }
+  const hospitalId=state.active.hospital_id;
+  const payments=(Array.isArray(state.payments)?state.payments:[])
+    .filter(p=>p.hospital_id===hospitalId);
+  if(!payments.length){
+    alert('There are no payments to export for the selected hospital.');
+    return;
+  }
+
+  // Keep exported columns compatible with the payment-import template.
+  const rows=[
+    ['payment_ref','invoice_ref','payment_date','amount','payer','payment_method'],
+    ...payments.map(p=>[
+      p.payment_ref??'',
+      p.invoice_ref??'',
+      p.payment_date,
+      Number(p.amount??0),
+      p.payer??'',
+      p.payment_method??''
+    ])
+  ];
+  const csv='\uFEFF'+csvRows(rows);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='paymind-payments-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+function exportClaimsCSV(){
+  if(!state.active){
+    alert('Select a hospital workspace before exporting claims.');
+    return;
+  }
+  if(!canManageExceptions()){
+    alert('Your role is not permitted to export claim data.');
+    return;
+  }
+  const hospitalId=state.active.hospital_id;
+  const claims=(Array.isArray(state.claims)?state.claims:[])
+    .filter(c=>c.hospital_id===hospitalId);
+  if(!claims.length){
+    alert('There are no claims to export for the selected hospital.');
+    return;
+  }
+
+  // Keep exported columns compatible with the claims-import template.
+  const rows=[
+    ['claim_ref','invoice_ref','payer','submitted_date','amount','status'],
+    ...claims.map(c=>[
+      c.claim_ref,
+      c.invoice_ref??'',
+      c.payer,
+      c.submitted_date,
+      Number(c.amount??0),
+      c.status
+    ])
+  ];
+  const csv='\uFEFF'+csvRows(rows);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='paymind-claims-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function downloadTemplate(type){
   const headers=schemas[type];
   const sample={
@@ -9090,6 +9176,8 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeExcep
 
 document.querySelectorAll('[data-template]').forEach(b=>b.onclick=()=>downloadTemplate(b.dataset.template));
 $('exportInvoicesCsv').onclick=exportInvoicesCSV;
+$('exportPaymentsCsv').onclick=exportPaymentsCSV;
+$('exportClaimsCsv').onclick=exportClaimsCSV;
 
 sb.auth.getSession().then(async r=>{
   if(r.error){console.warn('PayMind session check error',r.error);return;}
