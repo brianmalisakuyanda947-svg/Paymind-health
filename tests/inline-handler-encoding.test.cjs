@@ -58,14 +58,16 @@ test('encoded hostile-looking values remain inert handler arguments after HTML d
   ];
 
   for (const input of inputs) {
+    const received = [];
     const context = {
-      captured: null,
-      capture(value) { this.captured = value; }
+      received,
+      capture(value) { received.push(value); }
     };
     const decodedArgument = decodeHtmlAttribute(encode(input));
     const handlerSource = "capture('" + decodedArgument + "');";
     vm.runInNewContext(handlerSource, context);
-    assert.equal(context.captured, input, 'value should round-trip unchanged');
+    assert.equal(received[0], input, 'value should round-trip unchanged');
+    assert.equal(received.length, 1, 'handler should invoke capture exactly once');
     assert.equal(context.pwned, undefined, 'payload must remain inert data');
   }
 });
