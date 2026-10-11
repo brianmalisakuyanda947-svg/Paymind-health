@@ -42,7 +42,7 @@ alter table public.exceptions
 
 alter table public.exceptions
   add constraint exceptions_recovery_status_check
-    check (recovery_status in ('not_started','partially_recovered','fully_recovered')),
+    check (recovery_status in ('not_started','in_progress','partially_recovered','fully_recovered')),
   add constraint exceptions_recovery_amount_check
     check (recovery_amount >= 0 and recovery_amount <= exposure_amount),
   add constraint exceptions_recovery_fully_recovered_check
