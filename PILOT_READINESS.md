@@ -94,11 +94,11 @@ A number of dashboard buttons pass database-derived values (including claim refe
 
 ### 8. Recovery status model mismatch — HIGH
 
-The database constraint for `exceptions.recovery_status` accepts only `not_started`, `partially_recovered` and `fully_recovered`. The prior UI offered unsupported `in_progress` and `written_off` options.
+The applied `supabase-pilot-hardening-v1.sql` constraint accepts `not_started`, `partially_recovered` and `fully_recovered`, while the application workflow also uses `in_progress`. The old `written_off` option was unsupported and there is no proper write-off amount/reason/approval ledger.
 
-**Mitigation in branch `pilot-readiness-audit-v1`:** the status dropdown and legacy save path now accept only database-supported statuses. An exception cannot be resolved while exposure remains outstanding. This avoids unsupported status writes, but a financial write-off workflow is intentionally unavailable until write-off amount, rationale, approvals and subsequent-recovery accounting are defined.
+**Implementation in branch:** `supabase-pilot-status-alignment-v1.sql` safely extends the database constraint to include `in_progress` without rerunning v1 or rewriting existing recovery amounts. The UI supports those four statuses and no longer offers `written_off`. An exception cannot be resolved while exposure remains outstanding.
 
-**Action still required:** design and test the write-off workflow before enabling write-offs. Do not just broaden the CHECK constraint.
+**Required before deploying the branch:** review and run the status-alignment migration after `supabase-pilot-hardening-v1.sql`. Keep write-off unavailable until the write-off amount, rationale, approval and subsequent-recovery accounting are properly designed and tested.
 
 ### 9. Audit-log authenticity — HIGH
 
@@ -124,16 +124,21 @@ The focused SQL tests and signed-URL document-view test have passed in the demon
 ## Branch changes for review — 2026-10-11
 
 - Dynamic inline-handler arguments are escaped for JavaScript string content before HTML attribute encoding.
-- CSV export serialization is centralised and formula-safe.
-- Recovery status controls now offer only database-supported values; write-off remains disabled pending an approved accounting model.
+- CSV export serialization is centralised and formula-safe; Node unit tests cover formula prefixes, CSV quoting and normal values.
+- A Node-based syntax test compiles each inline application script without executing it.
+- GitHub Actions workflow `.github/workflows/pilot-safety-tests.yml` runs the safety tests on PRs and pushes.
+- `supabase-pilot-status-alignment-v1.sql` allows the UI's `in_progress` recovery status; `written_off` remains unavailable pending a proper accounting model.
 - Follow-on migration `supabase-pilot-audit-v2.sql` adds database-generated audit source records for core financial/recovery table changes. It is not yet applied to Supabase.
 - Review pull request: #4.
 
-## Remaining release gates
+## Required sequence and remaining release gates
 
-1. Review and safely apply the follow-on audit migration; confirm seven trigger rows are enabled and check that spoofed client `db_*` events are denied.
-2. Test CSV formula neutralisation and regression-test the affected inline-handler buttons with punctuation in payer and claim data.
-3. Design the write-off accounting workflow before reintroducing it.
-4. Run existing workflow regression checks after the branch changes; an automated browser test suite has not been confirmed.
-5. Complete backup/restore and session-expiry tests.
-6. Do not load real hospital/patient financial data until these gates pass.
+1. Run the CSV safety, inline-handler encoding and embedded-script syntax tests in GitHub Actions; resolve any failures.
+2. Review and run `supabase-pilot-status-alignment-v1.sql` after the already-applied `supabase-pilot-hardening-v1.sql`.
+3. Review and run `supabase-pilot-audit-v2.sql`; confirm seven triggers are enabled.
+4. Verify an authenticated mutation creates a `source='database_trigger'` audit row and a client attempt to insert a `db_*` event is rejected.
+5. Regression-test affected inline-handler buttons using payer names and claim references with apostrophes, backslashes, quotes and punctuation.
+6. Manually open representative CSV exports with malicious-looking test values in a spreadsheet tool.
+7. Design the write-off accounting workflow before reintroducing it.
+8. Complete backup/restore, session-expiry and full workflow regression tests.
+9. Do not load real hospital/patient financial data until these gates pass.
