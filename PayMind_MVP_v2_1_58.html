@@ -1568,6 +1568,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
       <button class="btn secondary" data-template="invoices">Download invoice template</button>
       <button class="btn secondary" data-template="payments">Download payment template</button>
       <button class="btn secondary" data-template="claims">Download claims template</button>
+      <button class="btn secondary" id="exportInvoicesCsv">Download existing invoices CSV</button>
     </div>
     <div id="uploadStatus" class="status-box"></div>
     <div id="validation" class="validation"></div>
@@ -8838,6 +8839,43 @@ function clearUpload(){
   $('preview').style.display='none';$('preview').innerHTML='';$('confirmUpload').disabled=true;
 }
 
+function exportInvoicesCSV(){
+  if(!state.active){
+    alert('Select a hospital workspace before exporting invoices.');
+    return;
+  }
+  const invoices=Array.isArray(state.invoices)?state.invoices:[];
+  if(!invoices.length){
+    alert('There are no invoices to export for the selected hospital.');
+    return;
+  }
+
+  // Export the currently selected hospital's invoices using the shared
+  // formula-safe CSV serializer. Match the invoice-import template columns.
+  const rows=[
+    ['invoice_ref','invoice_date','amount','payer','department','status'],
+    ...invoices.map(i=>[
+      i.invoice_ref,
+      i.invoice_date,
+      Number(i.amount??0),
+      i.payer,
+      i.department??'',
+      i.status
+    ])
+  ];
+  const csv='\uFEFF'+csvRows(rows);
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='paymind-invoices-'+new Date().toISOString().slice(0,10)+'.csv';
+  a.style.display='none';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
 function downloadTemplate(type){
   const headers=schemas[type];
   const sample={
@@ -9045,6 +9083,7 @@ $('exceptionDetailBody').addEventListener('click',async function(ev){
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape')closeExceptionDetail();});
 
 document.querySelectorAll('[data-template]').forEach(b=>b.onclick=()=>downloadTemplate(b.dataset.template));
+$('exportInvoicesCsv').onclick=exportInvoicesCSV;
 
 sb.auth.getSession().then(async r=>{
   if(r.error){console.warn('PayMind session check error',r.error);return;}
