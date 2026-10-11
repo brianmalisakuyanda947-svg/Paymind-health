@@ -178,3 +178,10 @@ These manual checks verify normal export/download and file readability for the d
 **Partial pass:** the user clicked `Sign out` and the app displayed the PayMind sign-in screen. This confirms the normal logout navigation path. The screenshot showed the email and password fields autofilled by Safari; that is browser autofill, not proof of an authenticated app session.
 
 **Still required:** while not signing in again, open the app URL in a new tab and refresh it. The app should remain on the sign-in screen with no protected financial records loaded. Then test the browser Back button; if it briefly restores a cached dashboard, verify protected data cannot be refreshed or fetched without authentication and treat any displayed sensitive data after logout as a UI-cache concern. Do not mark session security fully passed until these checks and session-expiry testing are complete.
+
+
+## Signed-out new-tab revisit check — 2026-10-11
+
+**PASS for the demonstrated path:** after signing out, the user opened the published PayMind URL in a new Safari tab. The application displayed the sign-in screen with blank email/password fields rather than the hospital dashboard.
+
+**Still required:** test browser Back/Forward behaviour in the tab that was previously authenticated, confirm protected records cannot be reloaded or queried after sign-out, and test session/token expiry. This is a useful smoke test but not a complete session-security assessment.
