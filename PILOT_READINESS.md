@@ -153,3 +153,11 @@ The first audit test created one database-generated audit row but the client spo
 **Post-rollback cleanup (2026-10-11): PASS.** The user-visible cleanup query returned `remaining_test_invoices = 0` and `remaining_forged_events = 0`. This closes the audit spoof test and rollback-verification sub-gate. Broader pilot release gates and regression tests remain open.
 
 **Automated handler test (2026-10-11): PASS.** An additional Node test now simulates HTML attribute entity decoding and checks that apostrophes, backslashes, quotes, newlines, Unicode separators, and an injection-shaped payload remain a single inert argument. Current GitHub Actions run: [38155310240](https://github.com/brianmalisakuyanda947-svg/Paymind-health/actions/runs/38155310240).
+
+## Payment and claims exports — 2026-10-11
+
+PR #6 was merged as `5fb938e830c25c86fdc45c775649f9341549147f`. The app now includes `Download existing payments CSV` and `Download existing claims CSV` buttons alongside the existing invoice export. Both exporters are scoped to the active hospital, require an allowed finance role, use the shared formula-safe CSV serializer, and match the respective import-template columns.
+
+The payment/claims export unit tests were included in the successful post-merge safety-test run: https://github.com/brianmalisakuyanda947-svg/Paymind-health/actions/runs/38159688776.
+
+**Still required:** verify the new buttons in Safari after GitHub Pages deployment completes, open both files in Numbers/Excel, and confirm only the selected hospital's data is present. This confirms ordinary export readability but does not replace adversarial formula-safety verification.
