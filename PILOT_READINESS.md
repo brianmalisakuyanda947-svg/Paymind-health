@@ -94,22 +94,46 @@ A number of dashboard buttons pass database-derived values (including claim refe
 
 ### 8. Recovery status model mismatch — HIGH
 
-The recovery-status control in the UI offers `in_progress` and `written_off`, while the current database constraint on `exceptions.recovery_status` only accepts `not_started`, `partially_recovered` and `fully_recovered`. The UI can therefore offer values that the database rejects. The write-off path also lacks a dedicated amount/reason record, although resolving an exception relies on the `written_off` status.
+The database constraint for `exceptions.recovery_status` accepts only `not_started`, `partially_recovered` and `fully_recovered`. The prior UI offered unsupported `in_progress` and `written_off` options.
 
-**Action required:** define the intended write-off workflow and data fields; align UI options, database constraints, recovery totals and resolution rules in one reviewed migration. Do not simply broaden the check constraint without defining write-off accounting semantics.
+**Mitigation in branch `pilot-readiness-audit-v1`:** the status dropdown and legacy save path now accept only database-supported statuses. An exception cannot be resolved while exposure remains outstanding. This avoids unsupported status writes, but a financial write-off workflow is intentionally unavailable until write-off amount, rationale, approvals and subsequent-recovery accounting are defined.
+
+**Action still required:** design and test the write-off workflow before enabling write-offs. Do not just broaden the CHECK constraint.
 
 ### 9. Audit-log authenticity — HIGH
 
-The client-facing audit-log insert policy restricts `user_id` to the authenticated user and scopes rows to the user's hospital, but an authenticated member can still submit arbitrary `event_type` and `detail` values for that hospital. Append-only access prevents later edits/deletes; it does not by itself prove that each event represents a real workflow action.
+The client-facing audit-log insert policy restricts `user_id` to the authenticated user and scopes rows to the user's hospital, but an authenticated member can still submit arbitrary client-originated `event_type` and `detail` values. Append-only access does not by itself prove that an event represents a real workflow action.
 
-**Action required:** for a real-data pilot, move security-critical audit creation to database triggers or validated server-side functions/RPCs, and review which events must be authoritative.
+**Implementation in branch:** `supabase-pilot-audit-v2.sql` adds an explicit `source` label and database-trigger audit entries for insert/update/delete operations on invoices, payments, claims, exceptions, recovery transactions, recovery actions and recovery evidence. The new policy permits only client-tagged activity and blocks client inserts using the reserved `db_*` event namespace. The UI labels the source to distinguish the two categories.
+
+**Required before this is considered active:** review and apply this follow-on SQL migration after `supabase-pilot-hardening-v1.sql`, verify seven triggers are enabled, and confirm an authenticated mutation creates a `source='database_trigger'` row while a client attempt to spoof a `db_*` event is rejected. This migration has not been run against the Supabase project.
 
 ### 10. CSV formula injection — MEDIUM
 
-CSV exports quote fields containing commas, quotes or newlines, but quoting alone does not prevent spreadsheet formula execution when a cell begins with characters such as `=`, `+`, `-` or `@`.
+CSV exports originally quoted fields containing commas, quotes or newlines, but quoting alone does not prevent spreadsheet formula execution.
 
-**Action required:** centralise CSV cell serialization and neutralise formula-leading values across all exports, then test with malicious-looking payer names, references and notes.
+**Implementation in branch:** all 13 export serializers use shared `csvSafeCell()` / `csvRows()` helpers. Formula-leading text (including common leading whitespace/control characters before `=`, `+`, `-` or `@`) is prefixed safely, while genuine numeric values are retained as numeric cells.
+
+**Required verification:** run the branch smoke tests and manually open sample exports in a spreadsheet application with adversarial test strings before merging.
 
 ## Updated pilot decision
 
 The focused SQL tests and signed-URL document-view test have passed in the demonstrated workspace. The product is **not yet approved for real hospital data**: address the recovery-status/write-off mismatch and audit-log authenticity design before pilot sign-off, and merge the inline-handler hardening only after review/testing.
+
+
+## Branch changes for review — 2026-10-11
+
+- Dynamic inline-handler arguments are escaped for JavaScript string content before HTML attribute encoding.
+- CSV export serialization is centralised and formula-safe.
+- Recovery status controls now offer only database-supported values; write-off remains disabled pending an approved accounting model.
+- Follow-on migration `supabase-pilot-audit-v2.sql` adds database-generated audit source records for core financial/recovery table changes. It is not yet applied to Supabase.
+- Review pull request: #4.
+
+## Remaining release gates
+
+1. Review and safely apply the follow-on audit migration; confirm seven trigger rows are enabled and check that spoofed client `db_*` events are denied.
+2. Test CSV formula neutralisation and regression-test the affected inline-handler buttons with punctuation in payer and claim data.
+3. Design the write-off accounting workflow before reintroducing it.
+4. Run existing workflow regression checks after the branch changes; an automated browser test suite has not been confirmed.
+5. Complete backup/restore and session-expiry tests.
+6. Do not load real hospital/patient financial data until these gates pass.
