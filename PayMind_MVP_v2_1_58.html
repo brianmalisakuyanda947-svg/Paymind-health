@@ -2985,7 +2985,7 @@ async function loadData(){
     sb.from('invoices').select('*').eq('hospital_id',h).order('invoice_date',{ascending:false}),
     sb.from('payments').select('*').eq('hospital_id',h).order('payment_date',{ascending:false}),
     sb.from('claims').select('*').eq('hospital_id',h).order('submitted_date',{ascending:false}),
-    sb.from('audit_logs').select('id,event_type,entity_type,reference_text,detail,created_at,user_id').eq('hospital_id',h).order('created_at',{ascending:false}).limit(75),
+    sb.from('audit_logs').select('id,event_type,entity_type,reference_text,detail,created_at,user_id,source').eq('hospital_id',h).order('created_at',{ascending:false}).limit(75),
     sb.from('exceptions').select('*').eq('hospital_id',h).order('updated_at',{ascending:false}),
     sb.from('recovery_transactions').select('*').eq('hospital_id',h).order('recovery_date',{ascending:false}).order('created_at',{ascending:false}),
     sb.from('recovery_actions').select('*').eq('hospital_id',h).order('created_at',{ascending:false}),
