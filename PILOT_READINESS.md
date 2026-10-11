@@ -82,3 +82,74 @@ Before merging `pilot-hardening-v0.1` to `main`:
 ## Release rule
 
 Do not put real hospital/patient financial data into the pilot until the security tests above pass and the Supabase project confirms the hardened RLS/storage policies are active.
+
+
+## Additional static-review findings — 2026-10-11
+
+### 7. Inline event-handler argument encoding — HIGH
+
+A number of dashboard buttons pass database-derived values (including claim references and payer names) into inline JavaScript handlers. HTML escaping alone is insufficient because HTML character references are decoded before the browser parses the event-handler JavaScript.
+
+**Action in branch `pilot-readiness-audit-v1`:** dynamic arguments in inline event-handler attributes are now escaped for JavaScript string-content context and then for the containing HTML attribute. This is a defense-in-depth fix; before pilot sign-off, review whether any other dynamically generated inline handlers remain and consider replacing inline handlers with delegated event listeners entirely.
+
+### 8. Recovery status model mismatch — HIGH
+
+The applied `supabase-pilot-hardening-v1.sql` constraint accepts `not_started`, `partially_recovered` and `fully_recovered`, while the application workflow also uses `in_progress`. The old `written_off` option was unsupported and there is no proper write-off amount/reason/approval ledger.
+
+**Implementation in branch:** `supabase-pilot-status-alignment-v1.sql` safely extends the database constraint to include `in_progress` without rerunning v1 or rewriting existing recovery amounts. The UI supports those four statuses and no longer offers `written_off`. An exception cannot be resolved while exposure remains outstanding.
+
+**Required before deploying the branch:** review and run the status-alignment migration after `supabase-pilot-hardening-v1.sql`. Keep write-off unavailable until the write-off amount, rationale, approval and subsequent-recovery accounting are properly designed and tested.
+
+### 9. Audit-log authenticity — HIGH
+
+The client-facing audit-log insert policy restricts `user_id` to the authenticated user and scopes rows to the user's hospital, but an authenticated member can still submit arbitrary client-originated `event_type` and `detail` values. Append-only access does not by itself prove that an event represents a real workflow action.
+
+**Implementation in branch:** `supabase-pilot-audit-v2.sql` adds an explicit `source` label and database-trigger audit entries for insert/update/delete operations on invoices, payments, claims, exceptions, recovery transactions, recovery actions and recovery evidence. The new policy permits only client-tagged activity and blocks client inserts using the reserved `db_*` event namespace. The UI labels the source to distinguish the two categories.
+
+**Required before this is considered active:** review and apply this follow-on SQL migration after `supabase-pilot-hardening-v1.sql`, verify seven triggers are enabled, and confirm an authenticated mutation creates a `source='database_trigger'` row while a client attempt to spoof a `db_*` event is rejected. This migration has not been run against the Supabase project.
+
+### 10. CSV formula injection — MEDIUM
+
+CSV exports originally quoted fields containing commas, quotes or newlines, but quoting alone does not prevent spreadsheet formula execution.
+
+**Implementation in branch:** all 13 export serializers use shared `csvSafeCell()` / `csvRows()` helpers. Formula-leading text (including common leading whitespace/control characters before `=`, `+`, `-` or `@`) is prefixed safely, while genuine numeric values are retained as numeric cells.
+
+**Required verification:** run the branch smoke tests and manually open sample exports in a spreadsheet application with adversarial test strings before merging.
+
+## Updated pilot decision
+
+The focused SQL tests and signed-URL document-view test have passed in the demonstrated workspace. The product is **not yet approved for real hospital data**: address the recovery-status/write-off mismatch and audit-log authenticity design before pilot sign-off, and merge the inline-handler hardening only after review/testing.
+
+
+## Branch changes for review — 2026-10-11
+
+- Dynamic inline-handler arguments are escaped for JavaScript string content before HTML attribute encoding.
+- CSV export serialization is centralised and formula-safe; Node unit tests cover formula prefixes, CSV quoting and normal values.
+- A Node-based syntax test compiles each inline application script without executing it.
+- GitHub Actions workflow `.github/workflows/pilot-safety-tests.yml` runs the safety tests on PRs and pushes.
+- `supabase-pilot-status-alignment-v1.sql` allows the UI's `in_progress` recovery status; `written_off` remains unavailable pending a proper accounting model.
+- Follow-on migration `supabase-pilot-audit-v2.sql` adds database-generated audit source records for core financial/recovery table changes. It is not yet applied to Supabase.
+- Review pull request: #4.
+
+## Required sequence and remaining release gates
+
+1. Run the CSV safety, inline-handler encoding and embedded-script syntax tests in GitHub Actions; resolve any failures.
+2. Review and run `supabase-pilot-status-alignment-v1.sql` after the already-applied `supabase-pilot-hardening-v1.sql`.
+3. Review and run `supabase-pilot-audit-v2.sql`; confirm seven triggers are enabled.
+4. Verify an authenticated mutation creates a `source='database_trigger'` audit row and a client attempt to insert a `db_*` event is rejected.
+5. Regression-test affected inline-handler buttons using payer names and claim references with apostrophes, backslashes, quotes and punctuation.
+6. Manually open representative CSV exports with malicious-looking test values in a spreadsheet tool.
+7. Design the write-off accounting workflow before reintroducing it.
+8. Complete backup/restore, session-expiry and full workflow regression tests.
+9. Do not load real hospital/patient financial data until these gates pass.
+
+
+## Audit spoof test follow-up — 2026-10-11
+
+The first audit test created one database-generated audit row but the client spoof attempt was accepted. The additional migration `supabase-pilot-audit-v3-policy-fix.sql` was then applied in Supabase. The policy inspection showed RLS enabled and only the intended member SELECT and restricted INSERT policies.
+
+**Retest result (2026-10-11): PASS for the exercised path.** The invoice insert generated exactly one audit row, the authenticated client spoof attempt was rejected by RLS, and the temporary invoice was visible as one row before `ROLLBACK`.
+
+**Post-rollback cleanup (2026-10-11): PASS.** The user-visible cleanup query returned `remaining_test_invoices = 0` and `remaining_forged_events = 0`. This closes the audit spoof test and rollback-verification sub-gate. Broader pilot release gates and regression tests remain open.
+
+**Automated handler test (2026-10-11): PASS.** An additional Node test now simulates HTML attribute entity decoding and checks that apostrophes, backslashes, quotes, newlines, Unicode separators, and an injection-shaped payload remain a single inert argument. Current GitHub Actions run: [38155310240](https://github.com/brianmalisakuyanda947-svg/Paymind-health/actions/runs/38155310240).

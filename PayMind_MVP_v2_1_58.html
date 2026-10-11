@@ -2718,7 +2718,7 @@ main{max-width:1180px;margin:auto;padding:28px 22px 55px}
     </div>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Date</th><th>Event</th><th>Entity</th><th>Reference</th><th>Detail</th></tr></thead>
+        <thead><tr><th>Date</th><th>Event</th><th>Source</th><th>Entity</th><th>Reference</th><th>Detail</th></tr></thead>
         <tbody id="auditBody"></tbody>
       </table>
     </div>
@@ -2904,6 +2904,31 @@ const age = d => {
   return Number.isNaN(x.getTime()) ? 0 : Math.max(0,Math.floor((n-x)/86400000));
 };
 const esc = v => String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+function csvSafeCell(value){
+  let s=String(value??'');
+  const trimmed=s.trim();
+  const isSimpleNumber=/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed);
+  // Neutralise spreadsheet formulas in exported user-controlled text.
+  // Preserve genuine numeric values (including negative amounts) as numbers.
+  if(!isSimpleNumber && (/^(?:[\u0000-\u0020]|\uFEFF)*[=+\-@]/.test(s) || /^[\t\r]/.test(s))){
+    s="'"+s;
+  }
+  return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function csvRows(rows){
+  return rows.map(row=>row.map(csvSafeCell).join(',')).join('\r\n');
+}
+const jsargContent = v => String(v??'')
+  .replace(/\\/g,'\\\\')
+  .replace(/'/g,"\\'")
+  .replace(/\r/g,'\\r')
+  .replace(/\n/g,'\\n')
+  .replace(/\u2028/g,'\\u2028')
+  .replace(/\u2029/g,'\\u2029')
+  .replace(/&/g,'&amp;')
+  .replace(/"/g,'&quot;')
+  .replace(/</g,'&lt;')
+  .replace(/>/g,'&gt;');
 const roleName = r => String(r||'member').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 const statusLabel = s => String(s||'open').replaceAll('_',' ').replace(/\b\w/g,c=>c.toUpperCase());
 const priorityClass = p => p==='high'?'red':p==='low'?'blue':'amber';
@@ -2960,7 +2985,7 @@ async function loadData(){
     sb.from('invoices').select('*').eq('hospital_id',h).order('invoice_date',{ascending:false}),
     sb.from('payments').select('*').eq('hospital_id',h).order('payment_date',{ascending:false}),
     sb.from('claims').select('*').eq('hospital_id',h).order('submitted_date',{ascending:false}),
-    sb.from('audit_logs').select('id,event_type,entity_type,reference_text,detail,created_at,user_id').eq('hospital_id',h).order('created_at',{ascending:false}).limit(75),
+    sb.from('audit_logs').select('*').eq('hospital_id',h).order('created_at',{ascending:false}).limit(75),
     sb.from('exceptions').select('*').eq('hospital_id',h).order('updated_at',{ascending:false}),
     sb.from('recovery_transactions').select('*').eq('hospital_id',h).order('recovery_date',{ascending:false}).order('created_at',{ascending:false}),
     sb.from('recovery_actions').select('*').eq('hospital_id',h).order('created_at',{ascending:false}),
@@ -3201,6 +3226,10 @@ async function saveRecoveryStatus(id){
   if(!canManageExceptions())return;
   const ex=state.exceptionCases.find(e=>e.id===id);if(!ex)return;
   const status=$('modalRecoveryStatus')?.value||'not_started';
+  if(!['not_started','in_progress','partially_recovered','fully_recovered'].includes(status)){
+    alert('Unsupported recovery status. Refresh PayMind and try again.');
+    return;
+  }
   if(status==='fully_recovered'&&recoveryOutstandingForException(ex)>0){
     alert('Fully recovered requires recorded recovery to cover the full exposure.');
     return;
@@ -3224,7 +3253,7 @@ function exportRecoveryLedgerCSV(){
     const ex=map[t.exception_id];
     rows.push([t.recovery_date||'',ex?.exception_ref||'',ex?.payer||'',Number(t.amount||0),t.recovery_reference||'',t.note||'']);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-recovery-ledger.csv';a.click();URL.revokeObjectURL(url);
 }
@@ -3660,7 +3689,7 @@ async function openExceptionDetail(id){
       '<div class="detail-card"><h4>Action history</h4><div class="timeline">'+(actionList.length?actionList.map(function(a){return '<div class="timeline-item"><b>'+esc(a.action_text)+'</b><small>'+(a.owner_id===state.user?.id?'You':'User')+' • '+esc(a.status||'complete')+' • '+new Date(a.created_at).toLocaleString()+'</small></div>';}).join(''):'<div class="empty">No action notes recorded yet.</div>')+'</div></div>'+
       '<div class="detail-card"><h4>Audit history</h4><div class="timeline">'+(auditList.length?auditList.map(function(a){let d='';try{d=JSON.stringify(a.detail||{});}catch(_){ }return '<div class="timeline-item"><b>'+esc(a.event_type)+'</b><small>'+new Date(a.created_at).toLocaleString()+' • '+esc(d)+'</small></div>';}).join(''):'<div class="empty">No audit events found for this reference.</div>')+'</div></div>'+
     '</div>' + (canManageExceptions()?renderRecoveryControlsForModal(ex):'') +
-    (canManageExceptions()?'<div class="modal-grid"><div class="detail-card" style="grid-column:1/-1"><h4>Cash recovery &amp; transaction ledger</h4><div class="detail-list"><span>Exposure</span><b>'+money(ex.exposure_amount)+'</b><span>Recovered</span><b>'+money(recoveryTotalForException(ex))+'</b><span>Outstanding</span><b>'+money(recoveryOutstandingForException(ex))+'</b><span>Recovery status</span><b>'+esc(recoveryStatusLabel(ex.recovery_status||'not_started'))+'</b></div><div style="margin-top:10px"><b style="font-size:10px;color:var(--navy)">Recorded receipts</b><div class="table-wrap" style="margin-top:6px"><table class="detail-table"><thead><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Note</th></tr></thead><tbody>'+((state.recoveryTransactions||[]).filter(t=>t.exception_id===ex.id).map(t=>'<tr><td>'+esc(t.recovery_date||'—')+'</td><td>'+money(t.amount)+'</td><td>'+esc(t.recovery_reference||'—')+'</td><td>'+esc(t.note||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No recovery receipts recorded for this exception.</td></tr>')+'</tbody></table></div></div><div class="v18-next"><b>Resolution control:</b> an exception cannot be marked resolved while recovery remains outstanding. Record the cash recovery or explicitly record a write-off before resolving.</div><div class="recovery-form" style="margin-top:12px"><div><label class="label">Recovery status</label><select id="modalRecoveryStatus"><option value="not_started"'+((ex.recovery_status||'not_started')==='not_started'?' selected':'')+'>Not started</option><option value="in_progress"'+((ex.recovery_status||'')==='in_progress'?' selected':'')+'>In progress</option><option value="partially_recovered"'+((ex.recovery_status||'')==='partially_recovered'?' selected':'')+'>Partially recovered</option><option value="fully_recovered"'+((ex.recovery_status||'')==='fully_recovered'?' selected':'')+'>Fully recovered</option><option value="written_off"'+((ex.recovery_status||'')==='written_off'?' selected':'')+'>Written off</option></select></div><div><label class="label">New receipt amount</label><input id="modalLedgerAmount" type="number" min="0" step="0.01" placeholder="e.g. 2500"'+(recoveryFullyRecovered?' disabled':'')+'"></div><div><label class="label">Receipt date</label><input id="modalLedgerDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div><label class="label">Recovery reference</label><input id="modalLedgerReference" type="text" placeholder="e.g. REC-002"'+(recoveryFullyRecovered?' disabled':'')+'"></div><div class="full"><label class="label">Receipt note</label><textarea id="modalLedgerNote" placeholder="Document this recovery receipt"'+(recoveryFullyRecovered?' disabled':'')+'></textarea></div></div><div class="v18-next" style="margin-top:10px"><b>'+ (recoveryFullyRecovered ? 'Fully recovered — no additional receipt is required.' : 'Recovery receipt records actual cash received against the outstanding balance.') +'</b></div><div class="modal-actions" style="margin-top:10px"><button class="btn secondary" data-modal-recovery-status="1"'+(recoveryFullyRecovered?' disabled':'')+'>Save status</button><button class="btn primary" data-modal-recovery-tx="1"'+(recoveryFullyRecovered?' disabled':'')+'>'+ (recoveryFullyRecovered ? 'Fully recovered' : 'Add recovery receipt') +'</button></div></div></div>':'');
+    (canManageExceptions()?'<div class="modal-grid"><div class="detail-card" style="grid-column:1/-1"><h4>Cash recovery &amp; transaction ledger</h4><div class="detail-list"><span>Exposure</span><b>'+money(ex.exposure_amount)+'</b><span>Recovered</span><b>'+money(recoveryTotalForException(ex))+'</b><span>Outstanding</span><b>'+money(recoveryOutstandingForException(ex))+'</b><span>Recovery status</span><b>'+esc(recoveryStatusLabel(ex.recovery_status||'not_started'))+'</b></div><div style="margin-top:10px"><b style="font-size:10px;color:var(--navy)">Recorded receipts</b><div class="table-wrap" style="margin-top:6px"><table class="detail-table"><thead><tr><th>Date</th><th>Amount</th><th>Reference</th><th>Note</th></tr></thead><tbody>'+((state.recoveryTransactions||[]).filter(t=>t.exception_id===ex.id).map(t=>'<tr><td>'+esc(t.recovery_date||'—')+'</td><td>'+money(t.amount)+'</td><td>'+esc(t.recovery_reference||'—')+'</td><td>'+esc(t.note||'—')+'</td></tr>').join('')||'<tr><td colspan="4" class="empty">No recovery receipts recorded for this exception.</td></tr>')+'</tbody></table></div></div><div class="v18-next"><b>Resolution control:</b> an exception cannot be marked resolved while recovery remains outstanding. Record the cash recovery or explicitly record a write-off before resolving.</div><div class="recovery-form" style="margin-top:12px"><div><label class="label">Recovery status</label><select id="modalRecoveryStatus"><option value="not_started"'+((ex.recovery_status||'not_started')==='not_started'?' selected':'')+'>Not started</option><option value="in_progress"'+((ex.recovery_status||'')==='in_progress'?' selected':'')+'>In progress</option><option value="partially_recovered"'+((ex.recovery_status||'')==='partially_recovered'?' selected':'')+'>Partially recovered</option><option value="fully_recovered"'+((ex.recovery_status||'')==='fully_recovered'?' selected':'')+'>Fully recovered</option></select></div><div><label class="label">New receipt amount</label><input id="modalLedgerAmount" type="number" min="0" step="0.01" placeholder="e.g. 2500"'+(recoveryFullyRecovered?' disabled':'')+'"></div><div><label class="label">Receipt date</label><input id="modalLedgerDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div><label class="label">Recovery reference</label><input id="modalLedgerReference" type="text" placeholder="e.g. REC-002"'+(recoveryFullyRecovered?' disabled':'')+'"></div><div class="full"><label class="label">Receipt note</label><textarea id="modalLedgerNote" placeholder="Document this recovery receipt"'+(recoveryFullyRecovered?' disabled':'')+'></textarea></div></div><div class="v18-next" style="margin-top:10px"><b>'+ (recoveryFullyRecovered ? 'Fully recovered — no additional receipt is required.' : 'Recovery receipt records actual cash received against the outstanding balance.') +'</b></div><div class="modal-actions" style="margin-top:10px"><button class="btn secondary" data-modal-recovery-status="1"'+(recoveryFullyRecovered?' disabled':'')+'>Save status</button><button class="btn primary" data-modal-recovery-tx="1"'+(recoveryFullyRecovered?' disabled':'')+'>'+ (recoveryFullyRecovered ? 'Fully recovered' : 'Add recovery receipt') +'</button></div></div></div>':'');
 }
 
 function closeExceptionDetail(){
@@ -3749,7 +3778,7 @@ function renderFinanceWorkPlanner(){
       '<td>'+esc(recoveryActionLabel(a.status))+'</td>'+
       '<td>'+esc(a.due_date||'—')+overdueMark+dueSoonMark+'</td>'+
       '<td><span class="v19-owner">'+esc(a.owner_id===state.user?.id?'You':(a.owner_id?'Assigned':'Unassigned'))+'</span></td>'+
-      '<td><button class="btn secondary" style="padding:5px 4px;font-size:8px" onclick="openExceptionDetail(\''+esc(a.exception_id)+'\')">Manage</button> '+
+      '<td><button class="btn secondary" style="padding:5px 4px;font-size:8px" onclick="openExceptionDetail(\''+jsargContent(a.exception_id)+'\')">Manage</button> '+
       '<button class="btn secondary" style="padding:5px 7px;font-size:9px" data-v19-action="'+esc(a.id)+'" data-v19-ex="'+esc(a.exception_id)+'">'+statusBtn+'</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="5" class="v19-empty">No recovery actions match this view.</td></tr>';
@@ -4326,7 +4355,7 @@ function safeRenderPayerReconciliation(){
           '<div class="v21-bar"><span style="width:'+Math.max(5,Math.min(100,r.exceptions?recRate:100))+'%"></span></div>'+
           '<div class="v21-muted">Recovery '+recRate+'%</div></td>'+
         '<td><span class="v21-status '+cls+'">'+esc(r.signal)+'</span><div class="v21-muted">'+esc(r.next)+'</div></td>'+
-        '<td><div class="v21-action"><button class="btn secondary" onclick="focusPayerExceptions(\''+esc(r.payer)+'\')">Review exceptions</button><button class="btn primary" onclick="openPayerNextStep(\''+esc(r.payer)+'\')">'+esc(payerNextStepLabel(r.signal))+'</button></div></td>'+
+        '<td><div class="v21-action"><button class="btn secondary" onclick="focusPayerExceptions(\''+jsargContent(r.payer)+'\')">Review exceptions</button><button class="btn primary" onclick="openPayerNextStep(\''+jsargContent(r.payer)+'\')">'+esc(payerNextStepLabel(r.signal))+'</button></div></td>'+
       '</tr>';
     }).join(''):'<tr><td colspan="11" class="v21-empty">No payers match this view.</td></tr>';
   }catch(err){
@@ -4347,10 +4376,7 @@ function exportPayerReconciliationCSV(){
       r.exceptionExposure,r.claims90Value,r.exceptions,r.activeActions,
       r.evidenceCoverage+'%',r.signal,r.next
     ]));
-    const csv=out.map(row=>row.map(v=>{
-      const s=String(v??'');
-      return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;
-    }).join(',')).join('\n');
+    const csv=csvRows(out);
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -4452,7 +4478,7 @@ function exportExecutiveManagementDashboardCSV(){
       ['Overdue actions',actions.filter(a=>!['completed','cancelled'].includes(a.status)&&(typeof isActionOverdue==='function'?isActionOverdue(a):false)).length],
       [],['Alert severity','Title','Exception / Scope','Recommended next step','Exposure']];
     alerts.forEach(a=>rows.push([a.severity,a.title,a.meta,a.next,a.exposure??'']));
-    const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+    const csv=csvRows(rows);
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download='paymind-executive-management-dashboard-v2.csv';a.click();
@@ -4552,7 +4578,7 @@ function renderManagementAlerts(){
   $('v202AlertBody').innerHTML=visible.length?visible.slice(0,20).map(a=>{
     const badge=a.severity==='critical'?'v202-badge-critical':a.severity==='high'?'v202-badge-high':a.severity==='medium'?'v202-badge-medium':'v202-badge-watch';
     const management=a.id
-      ? '<div class="v202-btns"><button class="btn secondary" onclick="openExceptionDetail(\''+esc(a.id)+'\')">Manage</button><button class="btn primary" onclick="logManagementEscalation(\''+esc(a.id)+'\',\''+esc(a.title)+'\')">Escalate</button></div>'
+      ? '<div class="v202-btns"><button class="btn secondary" onclick="openExceptionDetail(\''+jsargContent(a.id)+'\')">Manage</button><button class="btn primary" onclick="logManagementEscalation(\''+jsargContent(a.id)+'\',\''+jsargContent(a.title)+'\')">Escalate</button></div>'
       : '<div class="v202-btns"><button class="btn secondary" data-v202-claims="1">Review claims</button></div>';
     return '<div class="v202-alert">'+
       '<div class="v202-severity"><span class="'+badge+'">'+esc(a.severity)+'</span></div>'+
@@ -4571,7 +4597,7 @@ function exportManagementAlertsCSV(){
   const alerts=buildManagementAlerts();
   const rows=[['PayMind Management Alerts','v2.0.2'],['As of',new Date().toISOString()],[],['Severity','Title','Exception / Scope','Trigger','Recommended next step','Exposure']];
   alerts.forEach(a=>rows.push([a.severity,a.title,a.meta,a.trigger,a.next,a.exposure??'']));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-management-alerts-v2.csv';a.click();
@@ -5480,7 +5506,7 @@ function renderRelationshipGraph(){
   $('graphLedgerCount').textContent=g.records.length+' records';
   $('graphLedgerBody').innerHTML=g.records.map(r=>{
     const openable=['claim','invoice','exception','payer'].includes(r.type);
-    const btn=openable?'<button class="btn secondary graph-open-btn" onclick="graphOpenRecord(\''+esc(r.type)+'\',\''+esc(r.openRef||r.ref)+'\')">Open</button>':'—';
+    const btn=openable?'<button class="btn secondary graph-open-btn" onclick="graphOpenRecord(\''+jsargContent(r.type)+'\',\''+jsargContent(r.openRef||r.ref)+'\')">Open</button>':'—';
     return '<tr><td>'+esc(r.type)+'</td><td><b>'+esc(r.ref)+'</b></td><td>'+esc(r.payer||g.payer)+'</td><td>'+esc(r.relationship)+'</td><td>'+esc(r.amount===null||r.amount===undefined?'—':money(r.amount))+'</td><td>'+esc(r.status||'recorded')+'</td><td>'+btn+'</td></tr>';
   }).join('')||'<tr><td colspan="7" class="v21-empty">No connected records.</td></tr>';
 }
@@ -5555,7 +5581,7 @@ function renderUnifiedIntelligence(){
     const payer=payerBySafe(g.payer,d.payerProfiles);
     const payerText=payer?payerIntelActionSignal(payer).title:'No current payer signal';
     const next=g.early[0]?.next||g.root[0]?.next||'Review the related payer/claim record.';
-    let open='<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openUnifiedRecord(\''+esc(g.ref)+'\',\''+esc(g.payer)+'\')">Open</button>';
+    let open='<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openUnifiedRecord(\''+jsargContent(g.ref)+'\',\''+jsargContent(g.payer)+'\')">Open</button>';
     return '<tr>'+
       '<td><b>'+esc(g.ref)+'</b></td>'+
       '<td>'+esc(g.payer)+'</td>'+
@@ -5766,12 +5792,12 @@ function renderEarlyWarnings(){
   $('earlyWarningBody').innerHTML=visible.length?visible.slice(0,30).map(s=>{
     const target=()=>{
       if(s.targetType==='claim'){
-        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+esc(s.ref)+'\')">Review</button>';
+        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+jsargContent(s.ref)+'\')">Review</button>';
       }
       if(s.targetType==='exception'){
-        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetail(\''+esc(s.exceptionId)+'\')">Manage</button>';
+        return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetail(\''+jsargContent(s.exceptionId)+'\')">Manage</button>';
       }
-      return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+esc(s.payer)+'\')">Open payer</button>';
+      return '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+jsargContent(s.payer)+'\')">Open payer</button>';
     };
     return '<tr>'+
       '<td><span class="ew-domain">'+esc(s.domain)+'</span></td>'+
@@ -5790,7 +5816,7 @@ function exportEarlyWarningsCSV(){
   const rows=[['PayMind Predictive Early-Warning Engine','v2.1.36'],['As of',new Date().toISOString()],[],
     ['Domain','Record','Payer','Warning','Rule','Evidence','Recommended review']];
   signals.forEach(s=>rows.push([s.domain,s.ref,s.payer,s.warning,s.rule,s.evidence,s.next]));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-early-warnings-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6011,7 +6037,7 @@ function exportDecisionCopilotCSV(){
     ['Unreviewed claims',d.unreviewedClaims.length],
     ['Overdue recovery actions',d.overdueActions.length],
     ['Exceptions without evidence',d.noEvidence.length]];
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-decision-copilot-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6091,7 +6117,7 @@ function renderPayerIntelligence(){
       '<td class="v21-money">'+money(x.claims90Value)+'</td>'+
       '<td><b>'+money(x.recovered)+'</b><div class="v21-muted">'+x.recoveryRate+'% recorded</div></td>'+
       '<td><span class="payer-signal '+sigClass+'">'+esc(sig.title)+'</span></td>'+
-      '<td><button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+esc(x.payer)+'\')">Open profile</button></td>'+
+      '<td><button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="selectPayerIntel(\''+jsargContent(x.payer)+'\')">Open profile</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="9" class="v21-empty">No payer profiles match this view.</td></tr>';
 }
@@ -6108,7 +6134,7 @@ function exportPayerIntelligenceCSV(){
     const s=payerIntelActionSignal(p);
     rows.push([p.payer,p.pressure,p.billed,p.received,p.allocated,p.openInvoices,p.unallocated,p.exceptions,p.exceptionExposure,p.claims90Value,p.recovered,p.recoveryRate+'%',p.reviewCoverage+'%',s.title,s.reason,s.next]);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-payer-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6199,7 +6225,7 @@ function renderFinanceIntelligenceCenter(){
       '<td><span class="v20-badge '+sigClass+'">'+esc(x.signal)+'</span></td>'+
       '<td>'+ (evidenceByEx.has(x.e.id)?'<span class="v20-badge good">Covered</span>':'<span class="v20-badge gap">Gap</span>') +'</td>'+
       '<td>'+esc(x.next)+'</td>'+
-      '<td><button class="btn secondary" style="padding:5px 7px;font-size:9px" onclick="openExceptionDetail(\''+esc(x.e.id)+'\')">Manage</button></td>'+
+      '<td><button class="btn secondary" style="padding:5px 7px;font-size:9px" onclick="openExceptionDetail(\''+jsargContent(x.e.id)+'\')">Manage</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="7" class="v20-empty">No unresolved exceptions.</td></tr>';
 
@@ -6233,7 +6259,7 @@ function exportFinanceIntelligenceCSV(){
     else if(out>0){signal='Large outstanding';next='Continue payer follow-up';}
     return [e.exception_ref,e.payer||'',out,e.priority||'medium',signal,evidence.has(e.id)?'Covered':'Gap',next];
   }).sort((a,b)=>Number(b[2])-Number(a[2])).forEach(r=>rows.push(r));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-finance-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
 }
@@ -6428,7 +6454,7 @@ function renderClaimControlTower(){
       '<td>'+esc(nextDate)+'</td>'+
       '<td><div class="claim-tower-outcome">'+esc(item.outcome)+'</div></td>'+
       '<td><b class="claim-tower-next">'+esc(nextStep)+'</b></td>'+
-      '<td><button class="btn '+((item.kind==='overdue'||item.kind==='today')?'primary':'secondary')+'" style="padding:5px 7px;font-size:8px;white-space:nowrap" onclick="openClaimReview(\''+esc(c.claim_ref)+'\')">'+buttonLabel+'</button></td>'+
+      '<td><button class="btn '+((item.kind==='overdue'||item.kind==='today')?'primary':'secondary')+'" style="padding:5px 7px;font-size:8px;white-space:nowrap" onclick="openClaimReview(\''+jsargContent(c.claim_ref)+'\')">'+buttonLabel+'</button></td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="10" class="v18-empty">No claims match this control view.</td></tr>';
 
@@ -6586,7 +6612,7 @@ function exportManagerCommandCenterCSV(){
       rows.push([c.claim_ref||'',c.payer||'',age(c.submitted_date),Number(c.amount||0),stateLabel,smart.label,
         f.nextDate||'',d.outcome||'',smart.action]);
     });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-finance-manager-command-center.csv';a.click();
@@ -6757,7 +6783,7 @@ function renderClaims(){
       <td>${esc(c.status)}</td>
       <td><span class="pill ${cls}">${label}</span>${c.invoice_ref?` <span style="font-size:9px;color:var(--muted)">${esc(c.invoice_ref)}</span>`:''}</td>
       <td class="queue-actions">
-        <button class="btn ${buttonClass}" style="padding:6px 9px;font-size:9px" onclick="openClaimReview('${esc(c.claim_ref)}')">${buttonLabel}</button>${meta}
+        <button class="btn ${buttonClass}" style="padding:6px 9px;font-size:9px" onclick="openClaimReview('${jsargContent(c.claim_ref)}')">${buttonLabel}</button>${meta}
       </td>
     </tr>`;
   }).join(''):'<tr><td colspan="8" class="empty">No claims meet this threshold.</td></tr>';
@@ -7595,8 +7621,8 @@ function renderRootCauseIntelligence(){
   $('rootSignalBody').innerHTML=visible.length?visible.slice(0,20).map(x=>{
     const kindClass=rootCauseIndicatorClass(x.kind);
     const management=x.domain==='claims'
-      ? '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+esc(x.ref)+'\')">Review</button>'
-      : '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetailByReference(\''+esc(x.ref)+'\')">Manage</button>';
+      ? '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openClaimReview(\''+jsargContent(x.ref)+'\')">Review</button>'
+      : '<button class="btn secondary" style="padding:5px 7px;font-size:8px" onclick="openExceptionDetailByReference(\''+jsargContent(x.ref)+'\')">Manage</button>';
     return '<tr>'+
       '<td><span class="root-domain">'+esc(x.domain)+'</span></td>'+
       '<td><b>'+esc(x.ref)+'</b></td>'+
@@ -7617,7 +7643,7 @@ function exportRootCauseIntelligenceCSV(){
   const rows=[['PayMind Root-Cause & Flow Intelligence','v2.1.33'],['As of',new Date().toISOString()],[],
     ['Domain','Record','Payer','Signal','Evidence','Recommended next step']];
   indicators.forEach(x=>rows.push([x.domain,x.ref,x.payer,x.signal,x.why,x.next]));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-root-cause-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -7713,7 +7739,7 @@ function renderRecoveryTracking(){
 function exportRecoveryCSV(){
   const rows=[['PayMind Health Cash Recovery Report','v1.4'],['As of',new Date().toISOString()],[],['Reference','Exception type','Payer','Exposure','Recovered','Outstanding recovery','Recovery status','Recovery date','Recovery reference']];
   (state.exceptionCases||[]).forEach(e=>{const exp=Number(e.exposure_amount||0),rec=Math.min(Math.max(Number(e.recovery_amount||0),0),exp);rows.push([e.exception_ref,e.exception_type,e.payer||'',exp,rec,Math.max(exp-rec,0),recoveryStatusLabel(e.recovery_status||'not_started'),e.recovery_date||'',e.recovery_reference||'']);});
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-cash-recovery-report.csv';a.click();URL.revokeObjectURL(url);
 }
 
@@ -7819,7 +7845,7 @@ function exportRevenueDashboardCSV(){
     ex.forEach(e=>{const exp=Number(e.exposure_amount||0),rec=Math.min(Math.max(Number(e.recovery_amount||0),0),exp),bal=Math.max(exp-rec,0);if(bal>0){const d=recoveryAgeDays(e);if(d>=x[3]&&d<=x[4]){count++;value+=bal;}}});
     rows.push([x[0],count,value]);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-revenue-recovery-dashboard.csv';a.click();URL.revokeObjectURL(url);
 }
 
@@ -7928,10 +7954,7 @@ function exportManagementReport(){
   const activity={};
   (state.audits||[]).filter(a=>withinPeriod(a.created_at,cutoff)).forEach(a=>activity[a.event_type||'other']=(activity[a.event_type||'other']||0)+1);
   Object.entries(activity).sort((a,b)=>b[1]-a[1]).forEach(x=>lines.push(x));
-  const csv=lines.map(row=>row.map(v=>{
-    const s=String(v??'');
-    return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;
-  }).join(',')).join('\n');
+  const csv=csvRows(lines);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='paymind-management-report.csv'; a.click();
@@ -8048,14 +8071,20 @@ function renderAudit(){
   const list=state.audits||[];
   $('auditBody').innerHTML=list.length?list.map(a=>{
     const type=a.event_type||'';
+    const source=a.source==='database_trigger'
+      ? 'Database verified'
+      : a.source==='client'
+        ? 'Client activity'
+        : 'Legacy event';
     return '<tr>'+
       '<td>'+new Date(a.created_at).toLocaleString()+'</td>'+
       '<td><span class="audit-badge">'+esc(auditEventLabel(type))+'</span></td>'+
+      '<td>'+esc(source)+'</td>'+
       '<td>'+esc(String(a.entity_type||'').replaceAll('_',' '))+'</td>'+
       '<td><b>'+esc(a.reference_text||'')+'</b></td>'+
       '<td style="min-width:460px">'+renderAuditDetail(a)+'</td>'+
       '</tr>';
-  }).join(''):'<tr><td colspan="5" class="empty">No audit events recorded yet.</td></tr>';
+  }).join(''):'<tr><td colspan="6" class="empty">No audit events recorded yet.</td></tr>';
 }
 
 function render(){
@@ -8290,7 +8319,7 @@ function renderFinancialOutlook(){
   $('outlookActions').innerHTML=actions.map(x=>{
     const btn=x.type==='ops'
       ?'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(null,null,null)">Open operations</button>'
-      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+esc(x.ref)+'\',\''+esc(x.type)+'\',null)">Open</button>';
+      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+jsargContent(x.ref)+'\',\''+jsargContent(x.type)+'\',null)">Open</button>';
     return '<div class="outlook-driver"><div><b>'+esc(x.title)+'</b><small>'+esc(x.meta)+'</small></div>'+btn+'</div>';
   }).join('');
 
@@ -8650,7 +8679,7 @@ function renderPaymentHealth(){
   $('phActions').innerHTML=d.actions.map(x=>{
     const btn=x.type==='ops'
       ?'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(null,null,null)">Open operations</button>'
-      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+esc(x.ref)+'\',\''+esc(x.type)+'\',null)">Open</button>';
+      :'<button class="btn secondary" style="padding:5px 7px;font-size:7px" onclick="paymentHealthOpen(\''+jsargContent(x.ref)+'\',\''+jsargContent(x.type)+'\',null)">Open</button>';
     return '<div class="payment-health-action"><div><b>'+esc(x.title)+'</b><small>'+esc(x.meta)+'</small></div>'+btn+'</div>';
   }).join('');
 }
@@ -8824,6 +8853,10 @@ async function saveRecovery(id){
   if(!canManageExceptions())return;
   const ex=state.exceptionCases.find(e=>e.id===id);if(!ex)return;
   const status=$('modalRecoveryStatus')?.value||'not_started';
+  if(!['not_started','in_progress','partially_recovered','fully_recovered'].includes(status)){
+    alert('Unsupported recovery status. Refresh PayMind and try again.');
+    return;
+  }
   const amount=Number($('modalRecoveryAmount')?.value||0);
   const exposure=Number(ex.exposure_amount||0);
   if(!Number.isFinite(amount)||amount<0){alert('Enter a valid non-negative recovery amount.');return;}
@@ -8847,16 +8880,14 @@ async function setExceptionStatus(id,status){
   if(!canManageExceptions())return;
   const ex=state.exceptionCases.find(e=>e.id===id); if(!ex)return;
 
-  // A financial exception can only be resolved when its tracked exposure has
-  // been fully recovered or explicitly written off. Completing a follow-up
-  // action alone must never resolve the money.
+  // Do not resolve a financial exception while any exposure remains outstanding.
+  // A separately audited write-off workflow is not available in this build.
   if(status==='resolved'){
     const outstanding=recoveryOutstandingForException(ex);
-    const recoveryStatus=ex.recovery_status||'not_started';
-    if(outstanding>0 && recoveryStatus!=='written_off'){
+    if(outstanding>0){
       alert(
         'This exception cannot be resolved while '+money(outstanding)+
-        ' remains outstanding. Record the recovery receipt or explicitly mark the recovery as written off first.'
+        ' remains outstanding. Record the recovery receipt first. Write-off recording is not available in this build.'
       );
       return;
     }
