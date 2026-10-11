@@ -2904,6 +2904,20 @@ const age = d => {
   return Number.isNaN(x.getTime()) ? 0 : Math.max(0,Math.floor((n-x)/86400000));
 };
 const esc = v => String(v??'').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'","&#39;");
+function csvSafeCell(value){
+  let s=String(value??'');
+  const trimmed=s.trim();
+  const isSimpleNumber=/^-?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(trimmed);
+  // Neutralise spreadsheet formulas in exported user-controlled text.
+  // Preserve genuine numeric values (including negative amounts) as numbers.
+  if(!isSimpleNumber && (/^(?:[\u0000-\u0020]|\uFEFF)*[=+\-@]/.test(s) || /^[\t\r]/.test(s))){
+    s="'"+s;
+  }
+  return /[",\r\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+}
+function csvRows(rows){
+  return rows.map(row=>row.map(csvSafeCell).join(',')).join('\r\n');
+}
 const jsargContent = v => String(v??'')
   .replace(/\\/g,'\\\\')
   .replace(/'/g,"\\'")
@@ -3235,7 +3249,7 @@ function exportRecoveryLedgerCSV(){
     const ex=map[t.exception_id];
     rows.push([t.recovery_date||'',ex?.exception_ref||'',ex?.payer||'',Number(t.amount||0),t.recovery_reference||'',t.note||'']);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-recovery-ledger.csv';a.click();URL.revokeObjectURL(url);
 }
@@ -4358,10 +4372,7 @@ function exportPayerReconciliationCSV(){
       r.exceptionExposure,r.claims90Value,r.exceptions,r.activeActions,
       r.evidenceCoverage+'%',r.signal,r.next
     ]));
-    const csv=out.map(row=>row.map(v=>{
-      const s=String(v??'');
-      return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;
-    }).join(',')).join('\n');
+    const csv=csvRows(out);
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');
@@ -4463,7 +4474,7 @@ function exportExecutiveManagementDashboardCSV(){
       ['Overdue actions',actions.filter(a=>!['completed','cancelled'].includes(a.status)&&(typeof isActionOverdue==='function'?isActionOverdue(a):false)).length],
       [],['Alert severity','Title','Exception / Scope','Recommended next step','Exposure']];
     alerts.forEach(a=>rows.push([a.severity,a.title,a.meta,a.next,a.exposure??'']));
-    const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+    const csv=csvRows(rows);
     const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
     const url=URL.createObjectURL(blob);
     const a=document.createElement('a');a.href=url;a.download='paymind-executive-management-dashboard-v2.csv';a.click();
@@ -4582,7 +4593,7 @@ function exportManagementAlertsCSV(){
   const alerts=buildManagementAlerts();
   const rows=[['PayMind Management Alerts','v2.0.2'],['As of',new Date().toISOString()],[],['Severity','Title','Exception / Scope','Trigger','Recommended next step','Exposure']];
   alerts.forEach(a=>rows.push([a.severity,a.title,a.meta,a.trigger,a.next,a.exposure??'']));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-management-alerts-v2.csv';a.click();
@@ -5801,7 +5812,7 @@ function exportEarlyWarningsCSV(){
   const rows=[['PayMind Predictive Early-Warning Engine','v2.1.36'],['As of',new Date().toISOString()],[],
     ['Domain','Record','Payer','Warning','Rule','Evidence','Recommended review']];
   signals.forEach(s=>rows.push([s.domain,s.ref,s.payer,s.warning,s.rule,s.evidence,s.next]));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-early-warnings-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6022,7 +6033,7 @@ function exportDecisionCopilotCSV(){
     ['Unreviewed claims',d.unreviewedClaims.length],
     ['Overdue recovery actions',d.overdueActions.length],
     ['Exceptions without evidence',d.noEvidence.length]];
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-decision-copilot-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6119,7 +6130,7 @@ function exportPayerIntelligenceCSV(){
     const s=payerIntelActionSignal(p);
     rows.push([p.payer,p.pressure,p.billed,p.received,p.allocated,p.openInvoices,p.unallocated,p.exceptions,p.exceptionExposure,p.claims90Value,p.recovered,p.recoveryRate+'%',p.reviewCoverage+'%',s.title,s.reason,s.next]);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-payer-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -6244,7 +6255,7 @@ function exportFinanceIntelligenceCSV(){
     else if(out>0){signal='Large outstanding';next='Continue payer follow-up';}
     return [e.exception_ref,e.payer||'',out,e.priority||'medium',signal,evidence.has(e.id)?'Covered':'Gap',next];
   }).sort((a,b)=>Number(b[2])-Number(a[2])).forEach(r=>rows.push(r));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-finance-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
 }
@@ -6597,7 +6608,7 @@ function exportManagerCommandCenterCSV(){
       rows.push([c.claim_ref||'',c.payer||'',age(c.submitted_date),Number(c.amount||0),stateLabel,smart.label,
         f.nextDate||'',d.outcome||'',smart.action]);
     });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');a.href=url;a.download='paymind-finance-manager-command-center.csv';a.click();
@@ -7628,7 +7639,7 @@ function exportRootCauseIntelligenceCSV(){
   const rows=[['PayMind Root-Cause & Flow Intelligence','v2.1.33'],['As of',new Date().toISOString()],[],
     ['Domain','Record','Payer','Signal','Evidence','Recommended next step']];
   indicators.forEach(x=>rows.push([x.domain,x.ref,x.payer,x.signal,x.why,x.next]));
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');
   a.href=url;a.download='paymind-root-cause-intelligence-v2.csv';a.click();URL.revokeObjectURL(url);
@@ -7724,7 +7735,7 @@ function renderRecoveryTracking(){
 function exportRecoveryCSV(){
   const rows=[['PayMind Health Cash Recovery Report','v1.4'],['As of',new Date().toISOString()],[],['Reference','Exception type','Payer','Exposure','Recovered','Outstanding recovery','Recovery status','Recovery date','Recovery reference']];
   (state.exceptionCases||[]).forEach(e=>{const exp=Number(e.exposure_amount||0),rec=Math.min(Math.max(Number(e.recovery_amount||0),0),exp);rows.push([e.exception_ref,e.exception_type,e.payer||'',exp,rec,Math.max(exp-rec,0),recoveryStatusLabel(e.recovery_status||'not_started'),e.recovery_date||'',e.recovery_reference||'']);});
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-cash-recovery-report.csv';a.click();URL.revokeObjectURL(url);
 }
 
@@ -7830,7 +7841,7 @@ function exportRevenueDashboardCSV(){
     ex.forEach(e=>{const exp=Number(e.exposure_amount||0),rec=Math.min(Math.max(Number(e.recovery_amount||0),0),exp),bal=Math.max(exp-rec,0);if(bal>0){const d=recoveryAgeDays(e);if(d>=x[3]&&d<=x[4]){count++;value+=bal;}}});
     rows.push([x[0],count,value]);
   });
-  const csv=rows.map(r=>r.map(v=>{const s=String(v??'');return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;}).join(',')).join('\n');
+  const csv=csvRows(rows);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='paymind-revenue-recovery-dashboard.csv';a.click();URL.revokeObjectURL(url);
 }
 
@@ -7939,10 +7950,7 @@ function exportManagementReport(){
   const activity={};
   (state.audits||[]).filter(a=>withinPeriod(a.created_at,cutoff)).forEach(a=>activity[a.event_type||'other']=(activity[a.event_type||'other']||0)+1);
   Object.entries(activity).sort((a,b)=>b[1]-a[1]).forEach(x=>lines.push(x));
-  const csv=lines.map(row=>row.map(v=>{
-    const s=String(v??'');
-    return /[",\n]/.test(s)?'"'+s.replaceAll('"','""')+'"':s;
-  }).join(',')).join('\n');
+  const csv=csvRows(lines);
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a'); a.href=url; a.download='paymind-management-report.csv'; a.click();
