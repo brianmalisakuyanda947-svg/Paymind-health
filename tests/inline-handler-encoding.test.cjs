@@ -36,3 +36,36 @@ test('escapes line breaks and Unicode line separators', () => {
   assert.equal(encode('a\u2028b'), 'a\\u2028b');
   assert.equal(encode('a\u2029b'), 'a\\u2029b');
 });
+
+
+test('encoded hostile-looking values remain inert handler arguments after HTML decoding', () => {
+  const decodeHtmlAttribute = (value) => value.replace(/&(amp|quot|lt|gt);/g, (_all, entity) => ({
+    amp: '&',
+    quot: '"',
+    lt: '<',
+    gt: '>'
+  })[entity]);
+
+  const inputs = [
+    "O'Brien",
+    "name\\segment",
+    "');globalThis.pwned=true;//",
+    'A&B "West"',
+    '</script><img src=x onerror=alert(1)>',
+    'line1\nline2',
+    'a\u2028b',
+    'a\u2029b'
+  ];
+
+  for (const input of inputs) {
+    const context = {
+      captured: null,
+      capture(value) { this.captured = value; }
+    };
+    const decodedArgument = decodeHtmlAttribute(encode(input));
+    const handlerSource = "capture('" + decodedArgument + "');";
+    vm.runInNewContext(handlerSource, context);
+    assert.equal(context.captured, input, 'value should round-trip unchanged');
+    assert.equal(context.pwned, undefined, 'payload must remain inert data');
+  }
+});
