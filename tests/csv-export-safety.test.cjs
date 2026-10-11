@@ -26,7 +26,7 @@ test('neutralises common spreadsheet formula prefixes', () => {
 test('neutralises whitespace-prefixed formulas and leading control characters', () => {
   assert.equal(csvSafeCell('  =1+1'), "'  =1+1");
   assert.equal(csvSafeCell('\t=1+1'), "'\t=1+1");
-  assert.equal(csvSafeCell('\rReport'), "'\rReport");
+  assert.equal(csvSafeCell('\rReport'), "\"'\rReport\"");
 });
 
 test('preserves genuine numeric values including negative amounts', () => {
