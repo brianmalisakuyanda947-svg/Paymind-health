@@ -8844,13 +8844,19 @@ function exportInvoicesCSV(){
     alert('Select a hospital workspace before exporting invoices.');
     return;
   }
-  const invoices=Array.isArray(state.invoices)?state.invoices:[];
+  if(!canManageExceptions()){
+    alert('Your role is not permitted to export invoice data.');
+    return;
+  }
+  const hospitalId=state.active.hospital_id;
+  const invoices=(Array.isArray(state.invoices)?state.invoices:[])
+    .filter(i=>i.hospital_id===hospitalId);
   if(!invoices.length){
     alert('There are no invoices to export for the selected hospital.');
     return;
   }
 
-  // Export the currently selected hospital's invoices using the shared
+  // Export only the selected hospital's invoices using the shared
   // formula-safe CSV serializer. Match the invoice-import template columns.
   const rows=[
     ['invoice_ref','invoice_date','amount','payer','department','status'],
