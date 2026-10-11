@@ -150,4 +150,4 @@ The first audit test created one database-generated audit row but the client spo
 
 **Retest result (2026-10-11): PASS for the exercised path.** The invoice insert generated exactly one audit row, the authenticated client spoof attempt was rejected by RLS, and the temporary invoice was visible as one row before `ROLLBACK`.
 
-**Still required:** run a post-rollback cleanup check and confirm both the temporary invoice count and forged-event count are zero. Gate 3 should not be marked fully closed until that cleanup check and the remaining regression tests are complete.
+**Post-rollback cleanup (2026-10-11): PASS.** The user-visible cleanup query returned `remaining_test_invoices = 0` and `remaining_forged_events = 0`. This closes the audit spoof test and rollback-verification sub-gate. Broader pilot release gates and regression tests remain open.
