@@ -14,7 +14,7 @@ const end = html.indexOf('\nconst roleName', start);
 assert.notEqual(start, -1, 'the app must define jsargContent');
 assert.notEqual(end, -1, 'the helper must end before roleName');
 
-const helperSource = html.slice(start, end).trim().replace(/;$/, '');
+const helperSource = html.slice(start, end).trim();
 const sandbox = {};
 vm.runInNewContext(helperSource + '\nthis.jsargContent = jsargContent;', sandbox);
 const encode = sandbox.jsargContent;
