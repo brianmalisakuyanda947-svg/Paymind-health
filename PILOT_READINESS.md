@@ -187,3 +187,10 @@ These manual checks verify normal export/download and file readability for the d
 - Refreshing the signed-out page with Cmd+R continued to display the sign-in screen.
 
 **Still required:** test browser Back/Forward behaviour in the tab that was previously authenticated where browser history permits it, verify protected records cannot be reloaded or queried after sign-out, and test session/token expiry. These are useful smoke tests but not a complete session-security assessment.
+
+
+## Refresh after logout — 2026-10-11
+
+**PASS for demonstrated path:** after logout, the user refreshed the PayMind page with Cmd+R. The page remained on the sign-in screen with empty email and password fields; the protected dashboard was not displayed.
+
+Browser Back/Forward behaviour remains unconfirmed because Safari's navigation controls appeared disabled in the provided screenshot. Token/session-expiry testing and verification that protected data requests are rejected after sign-out remain open.
